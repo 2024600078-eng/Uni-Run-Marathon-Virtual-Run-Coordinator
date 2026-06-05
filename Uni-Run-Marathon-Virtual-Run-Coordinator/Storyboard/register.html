@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Uni-Run</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="header">
+        <h1>Uni-Run</h1>
+        <p>Participant Registration Page</p>
+    </div>
+
+    <div class="navbar">
+        <a href="index.html">Home</a>
+        <a href="login.html">Login</a>
+        <a href="register.html">Register</a>
+        <a href="events.html">Events</a>
+        <a href="erd.html">ERD</a>
+    </div>
+
+    <div class="form-box">
+        <h2>Participant Registration</h2>
+
+        <form>
+            <label>Full Name</label>
+            <input type="text" placeholder="Enter your full name">
+
+            <label>Student ID / Staff ID</label>
+            <input type="text" placeholder="Enter your ID number">
+
+            <label>Email Address</label>
+            <input type="email" placeholder="Enter your email address">
+
+            <label>Phone Number</label>
+            <input type="text" placeholder="Enter your phone number">
+
+            <label>Password</label>
+            <input type="password" placeholder="Create your password">
+
+            <label>Confirm Password</label>
+            <input type="password" placeholder="Confirm your password">
+
+            <label>Participant Category</label>
+            <select>
+                <option>Select category</option>
+                <option>Student</option>
+                <option>Staff</option>
+                <option>Public</option>
+            </select>
+
+            <label>Gender</label>
+            <select>
+                <option>Select gender</option>
+                <option>Male</option>
+                <option>Female</option>
+            </select>
+
+            <a href="participant-dashboard.html" class="btn">Register Account</a>
+            <a href="login.html" class="btn btn-secondary">Back to Login</a>
+        </form>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Storyboard Explanation</h2>
+            <p>
+                This page allows new participants to create an account before joining marathon or
+                virtual run events. Participants need to provide personal details such as name,
+                email, phone number, category and login password.
+            </p>
+            <p>
+                In the actual system, this registration form will be connected to Servlet and JSP.
+                The submitted data will be saved into the database.
+            </p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>CSC584 Enterprise Programming | Uni-Run Storyboard</p>
+    </div>
+
+</body>
+</html>

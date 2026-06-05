@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Registration | Uni-Run</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="header">
+        <h1>Uni-Run</h1>
+        <p>Event Registration Page</p>
+    </div>
+
+    <div class="navbar">
+        <a href="index.html">Home</a>
+        <a href="login.html">Login</a>
+        <a href="register.html">Register</a>
+        <a href="events.html">Events</a>
+        <a href="erd.html">ERD</a>
+    </div>
+
+    <div class="form-box">
+        <h2>Register for Running Event</h2>
+
+        <form>
+            <label>Participant Name</label>
+            <input type="text" placeholder="Enter participant name">
+
+            <label>Email Address</label>
+            <input type="email" placeholder="Enter email address">
+
+            <label>Select Event</label>
+            <select>
+                <option>Select an event</option>
+                <option>Campus Fun Run 2026 - 5KM</option>
+                <option>Virtual Run Challenge - 10KM</option>
+                <option>Charity Marathon - 21KM</option>
+            </select>
+
+            <label>Run Category</label>
+            <select>
+                <option>Select run category</option>
+                <option>Physical Marathon</option>
+                <option>Virtual Run</option>
+            </select>
+
+            <label>T-Shirt Size</label>
+            <select>
+                <option>Select size</option>
+                <option>S</option>
+                <option>M</option>
+                <option>L</option>
+                <option>XL</option>
+                <option>XXL</option>
+            </select>
+
+            <label>Emergency Contact Number</label>
+            <input type="text" placeholder="Enter emergency contact number">
+
+            <label>Health Declaration</label>
+            <textarea rows="4" placeholder="Example: I confirm that I am physically fit to join this running event."></textarea>
+
+            <a href="participant-dashboard.html" class="btn">Submit Registration</a>
+            <a href="events.html" class="btn btn-secondary">Back to Events</a>
+        </form>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Storyboard Explanation</h2>
+            <p>
+                This page allows participants to register for a selected marathon or virtual run event.
+                Participants need to provide event selection, run category, t-shirt size, emergency
+                contact number and health declaration.
+            </p>
+            <p>
+                In the actual system development, this registration form will submit data to a Servlet.
+                The registration details will then be saved into the database and shown in the
+                participant dashboard.
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Expected System Process</h2>
+            <p>1. Participant selects an available event.</p>
+            <p>2. Participant fills in registration details.</p>
+            <p>3. System saves registration record.</p>
+            <p>4. Participant can view registration status in dashboard.</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>CSC584 Enterprise Programming | Uni-Run Storyboard</p>
+    </div>
+
+</body>
+</html>

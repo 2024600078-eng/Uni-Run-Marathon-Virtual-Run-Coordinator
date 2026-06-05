@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Participants | Uni-Run</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="header">
+        <h1>Uni-Run</h1>
+        <p>Manage Participant Information</p>
+    </div>
+
+    <div class="navbar">
+        <a href="admin-dashboard.html">Dashboard</a>
+        <a href="manage-events.html">Manage Events</a>
+        <a href="manage-participants.html">Manage Participants</a>
+        <a href="verify-results.html">Verify Results</a>
+        <a href="login.html">Logout</a>
+    </div>
+
+    <div class="container">
+
+        <div class="dashboard-grid">
+
+            <div class="dashboard-card">
+                <h3>Total Participants</h3>
+                <p class="dashboard-number">45</p>
+                <p>Registered users in the system</p>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>Approved Registrations</h3>
+                <p class="dashboard-number">32</p>
+                <p>Participants approved for events</p>
+            </div>
+
+            <div class="dashboard-card">
+                <h3>Pending Registrations</h3>
+                <p class="dashboard-number">13</p>
+                <p>Participants waiting for approval</p>
+            </div>
+
+        </div>
+
+        <div class="card">
+            <h2>Participant Registration List</h2>
+
+            <table>
+                <tr>
+                    <th>Participant ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Event Registered</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+
+                <tr>
+                    <td>P001</td>
+                    <td>Aiman Hakimi</td>
+                    <td>aiman@example.com</td>
+                    <td>Campus Fun Run 2026</td>
+                    <td>Physical Marathon</td>
+                    <td>Approved</td>
+                    <td>
+                        <a href="#" class="table-link">View</a> |
+                        <a href="#" class="table-link">Update</a> |
+                        <a href="#" class="table-link">Delete</a>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>P002</td>
+                    <td>Nur Aisyah</td>
+                    <td>aisyah@example.com</td>
+                    <td>Virtual Run Challenge</td>
+                    <td>Virtual Run</td>
+                    <td>Pending Result</td>
+                    <td>
+                        <a href="#" class="table-link">View</a> |
+                        <a href="#" class="table-link">Update</a> |
+                        <a href="#" class="table-link">Delete</a>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>P003</td>
+                    <td>Daniel Tan</td>
+                    <td>daniel@example.com</td>
+                    <td>Charity Marathon</td>
+                    <td>Physical Marathon</td>
+                    <td>Pending Approval</td>
+                    <td>
+                        <a href="#" class="table-link">View</a> |
+                        <a href="#" class="table-link">Update</a> |
+                        <a href="#" class="table-link">Delete</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>Participant Details Preview</h2>
+
+            <form>
+                <label>Participant Name</label>
+                <input type="text" value="Aiman Hakimi">
+
+                <label>Email Address</label>
+                <input type="email" value="aiman@example.com">
+
+                <label>Phone Number</label>
+                <input type="text" value="012-3456789">
+
+                <label>Registered Event</label>
+                <input type="text" value="Campus Fun Run 2026">
+
+                <label>Registration Status</label>
+                <select>
+                    <option>Approved</option>
+                    <option>Pending Approval</option>
+                    <option>Rejected</option>
+                    <option>Pending Result</option>
+                </select>
+
+                <a href="manage-participants.html" class="btn">Update Participant</a>
+                <a href="admin-dashboard.html" class="btn btn-secondary">Back to Dashboard</a>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>CRUD Function Shown</h2>
+            <p>
+                This storyboard page shows the participant management module for administrators.
+                It includes basic CRUD actions for participant records.
+            </p>
+
+            <p><strong>Create:</strong> Participant records are created when users register for an event.</p>
+            <p><strong>Read:</strong> Admin can view participant registration details.</p>
+            <p><strong>Update:</strong> Admin can update participant registration status.</p>
+            <p><strong>Delete:</strong> Admin can remove incorrect or duplicate participant records.</p>
+        </div>
+
+        <div class="card">
+            <h2>Storyboard Explanation</h2>
+            <p>
+                This page allows the administrator to view and manage participant information.
+                The admin can check participant details, event registration records and registration status.
+            </p>
+            <p>
+                In the actual system, participant data will be retrieved from the database and managed
+                through Servlet and JSP pages.
+            </p>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <p>CSC584 Enterprise Programming | Uni-Run Storyboard</p>
+    </div>
+
+</body>
+</html>

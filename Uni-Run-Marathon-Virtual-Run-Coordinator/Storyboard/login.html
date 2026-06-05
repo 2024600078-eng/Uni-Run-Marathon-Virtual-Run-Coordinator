@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Uni-Run</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="header">
+        <h1>Uni-Run</h1>
+        <p>Login Page</p>
+    </div>
+
+    <div class="navbar">
+        <a href="index.html">Home</a>
+        <a href="login.html">Login</a>
+        <a href="register.html">Register</a>
+        <a href="events.html">Events</a>
+        <a href="erd.html">ERD</a>
+    </div>
+
+    <div class="form-box">
+        <h2>User Login</h2>
+
+        <form>
+            <label>Email</label>
+            <input type="email" placeholder="Enter your email address">
+
+            <label>Password</label>
+            <input type="password" placeholder="Enter your password">
+
+            <label>User Role</label>
+            <select>
+                <option>Select user role</option>
+                <option>Admin</option>
+                <option>Participant</option>
+            </select>
+
+            <a href="participant-dashboard.html" class="btn">Login as Participant</a>
+            <a href="admin-dashboard.html" class="btn btn-secondary">Login as Admin</a>
+        </form>
+
+        <p style="text-align:center; margin-top:15px;">
+            New participant?
+            <a href="register.html">Register here</a>
+        </p>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Storyboard Explanation</h2>
+            <p>
+                This login page allows users to access the Uni-Run system based on their role.
+                Admin users will be directed to the admin dashboard, while participants will be
+                directed to the participant dashboard.
+            </p>
+            <p>
+                In the actual system development, the login details will be validated using Servlet,
+                JSP and database records.
+            </p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>CSC584 Enterprise Programming | Uni-Run Storyboard</p>
+    </div>
+
+</body>
+</html>

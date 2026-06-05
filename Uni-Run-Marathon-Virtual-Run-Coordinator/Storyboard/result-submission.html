@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Result | Uni-Run</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="header">
+        <h1>Uni-Run</h1>
+        <p>Participant Result Submission</p>
+    </div>
+
+    <div class="navbar">
+        <a href="participant-dashboard.html">Dashboard</a>
+        <a href="events.html">Browse Events</a>
+        <a href="event-registration.html">Register Event</a>
+        <a href="result-submission.html">Submit Result</a>
+        <a href="login.html">Logout</a>
+    </div>
+
+    <div class="form-box">
+        <h2>Submit Running Result</h2>
+
+        <form>
+            <label>Select Registered Event</label>
+            <select>
+                <option>Select event</option>
+                <option>Campus Fun Run 2026 - 5KM</option>
+                <option>Virtual Run Challenge - 10KM</option>
+            </select>
+
+            <label>Distance Completed</label>
+            <input type="text" placeholder="Example: 5KM">
+
+            <label>Completion Time</label>
+            <input type="text" placeholder="Example: 00:35:20">
+
+            <label>Run Date</label>
+            <input type="date">
+
+            <label>Upload Proof Screenshot</label>
+            <input type="file">
+
+            <label>Additional Notes</label>
+            <textarea rows="4" placeholder="Enter any additional notes"></textarea>
+
+            <a href="participant-dashboard.html" class="btn">Submit Result</a>
+            <a href="participant-dashboard.html" class="btn btn-secondary">Back to Dashboard</a>
+        </form>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Storyboard Explanation</h2>
+            <p>
+                This page allows participants to submit their running results after completing a marathon
+                or virtual run. Participants can enter distance completed, completion time, run date
+                and upload proof screenshot.
+            </p>
+            <p>
+                In the actual system, uploaded proof and result details will be stored in the database
+                and verified by the administrator.
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Expected System Process</h2>
+            <p>1. Participant selects registered event.</p>
+            <p>2. Participant enters running result details.</p>
+            <p>3. Participant uploads proof screenshot.</p>
+            <p>4. Admin verifies submitted result.</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>CSC584 Enterprise Programming | Uni-Run Storyboard</p>
+    </div>
+
+</body>
+</html>

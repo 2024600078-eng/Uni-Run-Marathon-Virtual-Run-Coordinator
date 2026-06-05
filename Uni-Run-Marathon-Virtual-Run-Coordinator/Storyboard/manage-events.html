@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Events | Uni-Run</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="header">
+        <h1>Uni-Run</h1>
+        <p>Manage Marathon and Virtual Run Events</p>
+    </div>
+
+    <div class="navbar">
+        <a href="admin-dashboard.html">Dashboard</a>
+        <a href="manage-events.html">Manage Events</a>
+        <a href="manage-participants.html">Manage Participants</a>
+        <a href="verify-results.html">Verify Results</a>
+        <a href="login.html">Logout</a>
+    </div>
+
+    <div class="form-box">
+        <h2>Add New Event</h2>
+
+        <form>
+            <label>Event Name</label>
+            <input type="text" placeholder="Example: Campus Fun Run 2026">
+
+            <label>Event Category</label>
+            <select>
+                <option>Select category</option>
+                <option>Physical Marathon</option>
+                <option>Virtual Run</option>
+            </select>
+
+            <label>Distance</label>
+            <select>
+                <option>Select distance</option>
+                <option>5KM</option>
+                <option>10KM</option>
+                <option>21KM</option>
+                <option>42KM</option>
+            </select>
+
+            <label>Event Date</label>
+            <input type="date">
+
+            <label>Registration Fee</label>
+            <input type="text" placeholder="Example: RM 30">
+
+            <label>Maximum Participants</label>
+            <input type="number" placeholder="Example: 100">
+
+            <label>Event Description</label>
+            <textarea rows="4" placeholder="Enter event description"></textarea>
+
+            <a href="manage-events.html" class="btn">Add Event</a>
+            <a href="admin-dashboard.html" class="btn btn-secondary">Back to Dashboard</a>
+        </form>
+    </div>
+
+    <div class="container">
+
+        <div class="card">
+            <h2>Existing Event List</h2>
+
+            <table>
+                <tr>
+                    <th>Event Name</th>
+                    <th>Category</th>
+                    <th>Distance</th>
+                    <th>Date</th>
+                    <th>Fee</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+
+                <tr>
+                    <td>Campus Fun Run 2026</td>
+                    <td>Physical Marathon</td>
+                    <td>5KM</td>
+                    <td>15 June 2026</td>
+                    <td>RM 20</td>
+                    <td>Open</td>
+                    <td>
+                        <a href="#" class="table-link">Edit</a> |
+                        <a href="#" class="table-link">Delete</a>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Virtual Run Challenge</td>
+                    <td>Virtual Run</td>
+                    <td>10KM</td>
+                    <td>30 June 2026</td>
+                    <td>RM 15</td>
+                    <td>Open</td>
+                    <td>
+                        <a href="#" class="table-link">Edit</a> |
+                        <a href="#" class="table-link">Delete</a>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Charity Marathon</td>
+                    <td>Physical Marathon</td>
+                    <td>21KM</td>
+                    <td>20 July 2026</td>
+                    <td>RM 50</td>
+                    <td>Closed</td>
+                    <td>
+                        <a href="#" class="table-link">Edit</a> |
+                        <a href="#" class="table-link">Delete</a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>CRUD Function Shown</h2>
+            <p>
+                This storyboard page shows the event management module for administrators.
+                It includes the basic CRUD functions required in the actual system.
+            </p>
+
+            <p><strong>Create:</strong> Admin can add a new marathon or virtual run event.</p>
+            <p><strong>Read:</strong> Admin can view the list of existing events.</p>
+            <p><strong>Update:</strong> Admin can edit existing event details.</p>
+            <p><strong>Delete:</strong> Admin can remove an event from the system.</p>
+        </div>
+
+        <div class="card">
+            <h2>Storyboard Explanation</h2>
+            <p>
+                This page allows the administrator to manage all running events in the system.
+                The admin can enter event details such as event name, category, distance, date,
+                registration fee, maximum participants and event description.
+            </p>
+            <p>
+                In the actual development stage, this page will connect to Servlet and database
+                operations to save, retrieve, update and delete event records.
+            </p>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <p>CSC584 Enterprise Programming | Uni-Run Storyboard</p>
+    </div>
+
+</body>
+</html>
