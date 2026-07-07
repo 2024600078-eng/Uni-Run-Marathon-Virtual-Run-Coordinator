@@ -115,11 +115,11 @@ http://localhost:8084/UniRunSystem/testConnection.jsp
 
 ## Group Task Division
 
-- Member 1: Project setup, database, GitHub, integration, homepage, DBConnection
-- Member 2: Login, register, logout, session handling
-- Member 3: Event listing, event details, event registration
-- Member 4: Participant dashboard, registration history, result submission
-- Member 5: Admin dashboard, manage events, manage participants, reports
+- Khairil : Project setup, database, GitHub, integration, homepage, DBConnection
+- Nina : Login, register, logout, session handling
+- Arif : Event listing, event details, event registration
+- Naim : Participant dashboard, registration history, result submission
+- Nazim : Admin dashboard, manage events, manage participants, reports
 
 ## Current Status
 
