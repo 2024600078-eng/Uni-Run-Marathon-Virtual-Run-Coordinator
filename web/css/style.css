@@ -24,14 +24,24 @@ body {
 .logo {
     font-size: 26px;
     font-weight: bold;
+    color: white;
+    text-decoration: none;
+}
+
+.logo:hover {
+    color: #ffcc00;
 }
 
 .nav-links a {
     color: white;
     text-decoration: none;
     margin-left: 28px;
-    font-weight: bold;
+    font-weight: normal;
     font-size: 16px;
+   }
+   
+ .nav-links a.active {
+    font-weight: bold;
 }
 
 .nav-links a:hover {
@@ -199,3 +209,40 @@ footer {
         align-items: center;
     }
 }
+
+.feature-title-btn{
+    display:inline-block;
+    background:#0d47a1;
+    color:white;
+    text-decoration:none;
+    padding:10px 20px;
+    border-radius:8px;
+    font-size:20px;
+    font-weight:bold;
+    margin-bottom:18px;
+    transition:0.3s;
+}
+
+.feature-title-btn:hover{
+    background:#1565c0;
+    transform:translateY(-2px);
+}
+.logout-btn{
+
+    background:#dc3545;
+    color:white !important;
+    padding:8px 18px;
+    border-radius:6px;
+    margin-left:20px;
+    text-decoration:none;
+    transition:0.3s;
+
+}
+
+.logout-btn:hover{
+
+    background:#b02a37;
+    color:white !important;
+
+}
+

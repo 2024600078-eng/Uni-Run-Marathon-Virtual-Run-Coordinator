@@ -19,6 +19,7 @@
             <a href="events.jsp">Events</a>
             <a href="login.jsp">Login</a>
             <a href="register.jsp">Register</a>
+            
         </div>
     </div>
 
@@ -45,13 +46,18 @@
 
         <div class="features-container">
 
-            <div class="feature-card">
-                <h3>Event Registration</h3>
+                <div class="feature-card" onclick="window.location='register.jsp'">
+
+                <a href="register.jsp" class="feature-title-btn">
+                Event Registration
+                </a>
+
                 <p>
-                    Participants can browse available marathon and virtual run
-                    events and register online.
+                Participants can browse available marathon and virtual run 
+                events and register online.
                 </p>
-            </div>
+
+                </div>
 
             <div class="feature-card">
                 <h3>Virtual Run Tracking</h3>
