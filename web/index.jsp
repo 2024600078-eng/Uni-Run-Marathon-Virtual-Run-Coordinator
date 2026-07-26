@@ -43,41 +43,37 @@
     <!-- Features Section -->
     <section class="features-section">
         <h2>System Features</h2>
-
         <div class="features-container">
-
-                <div class="feature-card" onclick="window.location='register.jsp'">
-
+            <div class="feature-card" onclick="window.location='register.jsp'">
                 <a href="register.jsp" class="feature-title-btn">
                 Event Registration
                 </a>
-
                 <p>
                 Participants can browse available marathon and virtual run 
                 events and register online.
                 </p>
-
-                </div>
-
-            <div class="feature-card">
-                <h3>Virtual Run Tracking</h3>
+            </div>
+            <div class="feature-card" onclick="window.location='submitResult.jsp'">
+                <a href="submitResult.jsp" class="feature-title-btn">
+                Virtual Run Tracking
+                </a>
                 <p>
                     Participants can submit virtual run details and track their
                     run progress through the system.
                 </p>
             </div>
-
-            <div class="feature-card">
-                <h3>Result Management</h3>
+            <div class="feature-card" onclick="window.location='viewResultStatus.jsp'">
+                <a href="viewResultStatus.jsp" class="feature-title-btn">
+                Result Management
+                </a>
                 <p>
                     Organizers can manage participant records, registrations
                     and race results.
                 </p>
             </div>
-
         </div>
     </section>
-
+    
     <!-- Footer -->
     <footer>
         <p>© 2026 Uni-Run System | Marathon & Virtual Run Coordinator</p>
