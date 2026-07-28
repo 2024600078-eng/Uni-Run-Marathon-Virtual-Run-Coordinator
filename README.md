@@ -60,16 +60,16 @@ with the network switched off.
 
 ```mermaid
 erDiagram
-    users ||--o{ registrations : "makes"
-    events ||--o{ registrations : "receives"
-    registrations ||--o| results : "produces"
+    users ||--o{ registrations : makes
+    events ||--o{ registrations : receives
+    registrations ||--o| results : produces
 
     users {
         int user_id PK
         varchar full_name
         varchar email UK
-        varchar password "SHA-256 hash, never plain text"
-        varchar role "admin or participant"
+        varchar password
+        varchar role
         timestamp created_at
     }
 
@@ -92,14 +92,29 @@ erDiagram
 
     results {
         int result_id PK
-        int registration_id FK "unique, one result per registration"
+        int registration_id FK
         double distance_achieved
         varchar duration
         varchar proof_image
         timestamp submission_date
-        varchar approval_status "Pending, Approved or Rejected"
+        varchar approval_status
     }
 ```
+
+A participant makes many registrations and an event receives many
+registrations, so `registrations` resolves the many to many relationship
+between them. Each registration produces at most one result.
+
+### Notable columns
+
+| Column | Notes |
+|---|---|
+| `users.password` | SHA-256 hash of the password. Plain text is never stored. |
+| `users.role` | Either `admin` or `participant`. Decides which dashboard the user reaches on login. |
+| `registrations.status` | Set to `Registered` when a participant joins an event. |
+| `results.registration_id` | Unique, so a registration can hold only one result. |
+| `results.proof_image` | Generated filename of the uploaded image, stored outside the application. |
+| `results.approval_status` | `Pending`, `Approved` or `Rejected`. A rejected result may be corrected and resubmitted, which returns it to `Pending`. |
 
 ### Constraints
 
