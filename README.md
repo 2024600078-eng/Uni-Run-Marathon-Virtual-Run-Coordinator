@@ -176,9 +176,32 @@ the system can be demonstrated.
 | Participant | aisya@gmail.com | aisya123 |
 | Participant | nina@gmail.com | nina123 |
 | Participant | ahmad@gmail.com | ahmad123 |
+| Participant | farah@gmail.com | farah123 |
+| Participant | daniel@gmail.com | daniel123 |
+| Participant | siti@gmail.com | siti123 |
+| Participant | rajesh@gmail.com | rajesh123 |
 
 Logging in as the administrator goes to the admin dashboard; logging in as a
 participant goes to the participant dashboard.
+
+### What the sample data contains
+
+| | Count |
+|---|---|
+| Events | 8, running from August to November 2026 |
+| Participants | 8, plus one administrator |
+| Registrations | 24, spread unevenly so the dashboard chart is meaningful |
+| Results | 17 — 14 approved, 2 awaiting review, 1 rejected |
+
+The distances range from a 5 km campus run to a full 42.2 km marathon, and the
+fees from free to RM80, so the events list shows real variety rather than three
+near identical rows.
+
+The result mix is deliberate. **Campus Sunrise 5K** has six approved finishers,
+which fills the leaderboard podium with gold, silver and bronze places. Two
+results are left **Pending** so the approval screen has something waiting when
+you open it, and one is **Rejected** so the correction and resubmission flow can
+be demonstrated without having to reject something first.
 
 ## How to Run the Project
 
