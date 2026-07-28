@@ -131,6 +131,11 @@ All three foreign keys are declared `ON DELETE CASCADE`, so removing an event
 or a participant also removes the registrations and results beneath it and no
 orphan rows are left behind.
 
+> **Full database documentation is in [DATABASE.md](DATABASE.md)**: a complete
+> data dictionary for every column, the functional dependencies, a normalisation
+> analysis through 1NF to BCNF, the design trade-offs behind each choice, and
+> the known limitations.
+
 ## Database Setup
 
 1. Start MySQL from the XAMPP control panel.
