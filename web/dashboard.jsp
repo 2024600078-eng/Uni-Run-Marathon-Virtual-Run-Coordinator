@@ -1,17 +1,57 @@
-<%-- 
-    Document   : dashboard
-    Created on : Jul 9, 2026, 4:54:26 PM
-    Author     : arifs
---%>
-
+<%@include file="/WEB-INF/jspf/participantGuard.jspf" %>
 <%@page import="java.sql.*"%>
 <%@page import="util.DBConnection"%>
+<%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%
+    // Personal totals for the signed in participant, all in one round trip.
+    int myEvents = 0;
+    int mySubmitted = 0;
+    int myApproved = 0;
+    int myPending = 0;
+    boolean statsFailed = false;
+
+    String summarySql =
+          "SELECT "
+        + "(SELECT COUNT(*) FROM registrations WHERE user_id = ?) AS my_events, "
+        + "(SELECT COUNT(*) FROM results res JOIN registrations r "
+        + "   ON res.registration_id = r.registration_id WHERE r.user_id = ?) AS my_submitted, "
+        + "(SELECT COUNT(*) FROM results res JOIN registrations r "
+        + "   ON res.registration_id = r.registration_id "
+        + "   WHERE r.user_id = ? AND res.approval_status = 'Approved') AS my_approved, "
+        + "(SELECT COUNT(*) FROM results res JOIN registrations r "
+        + "   ON res.registration_id = r.registration_id "
+        + "   WHERE r.user_id = ? AND res.approval_status = 'Pending') AS my_pending";
+
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(summarySql)) {
+
+        for (int i = 1; i <= 4; i++) {
+            ps.setInt(i, currentUserId);
+        }
+
+        try (ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                myEvents = rs.getInt("my_events");
+                mySubmitted = rs.getInt("my_submitted");
+                myApproved = rs.getInt("my_approved");
+                myPending = rs.getInt("my_pending");
+            }
+        }
+    } catch (Exception e) {
+        statsFailed = true;
+        application.log("Loading dashboard statistics for user " + currentUserId, e);
+    }
+%>
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uni-Run | Participant Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/theme.css" rel="stylesheet">
+    <script src="js/app.js"></script>
 </head>
 <body class="bg-light">
 
@@ -21,27 +61,66 @@
         <div>
             <a class="text-white me-3 text-decoration-none" href="index.jsp">Home</a>
             <a class="text-white me-3 text-decoration-none" href="events.jsp">Events</a>
-            <a class="text-white text-decoration-none fw-bold" href="dashboard.jsp">Dashboard</a>
+            <a class="text-white me-3 text-decoration-none" href="leaderboard.jsp">Leaderboard</a>
+            <a class="text-white me-3 text-decoration-none fw-bold" href="dashboard.jsp">Dashboard</a>
             <a class="text-white text-decoration-none" href="LogoutServlet">Log Out</a>
-            
         </div>
     </nav>
 
     <div class="container my-5">
         <div class="p-4 bg-white shadow-sm rounded mb-4">
-            <h2 class="fw-bold text-dark">Welcome Back, Participant! 👋</h2>
-            <p class="text-muted">Register for the marathon and submit your proof of run here.</p>
+            <h2 class="fw-bold text-dark">
+                Welcome back, <%= Web.esc((String) session.getAttribute("fullName")) %>
+            </h2>
+            <p class="text-muted mb-0">
+                Register for an event and submit your proof of run here.
+            </p>
         </div>
 
-        <% if("success".equals(request.getParameter("status"))) { %>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <strong>Tahniah!</strong> Anda berjaya mendaftar untuk acara baharu.
+        <% if ("success".equals(request.getParameter("status"))) { %>
+            <div class="alert alert-success">
+                <strong>Success.</strong> You have been registered for the event.
             </div>
         <% } %>
 
-        <h4 class="fw-bold text-primary mb-3">Your Registered Events</h4>
+        <% if (!statsFailed) { %>
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-icon">&#127939;</div>
+                <div class="stat-value" data-count="<%= myEvents %>"><%= myEvents %></div>
+                <div class="stat-label">Events Joined</div>
+            </div>
+
+            <div class="stat-card is-info">
+                <div class="stat-icon">&#128228;</div>
+                <div class="stat-value" data-count="<%= mySubmitted %>"><%= mySubmitted %></div>
+                <div class="stat-label">Results Sent</div>
+            </div>
+
+            <div class="stat-card is-good">
+                <div class="stat-icon">&#9989;</div>
+                <div class="stat-value" data-count="<%= myApproved %>"><%= myApproved %></div>
+                <div class="stat-label">Approved</div>
+            </div>
+
+            <div class="stat-card is-alert">
+                <div class="stat-icon">&#9203;</div>
+                <div class="stat-value" data-count="<%= myPending %>"><%= myPending %></div>
+                <div class="stat-label">Pending Review</div>
+            </div>
+        </div>
+        <% } %>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-primary mb-0">Your Registered Events</h4>
+            <div>
+                <a href="events.jsp" class="btn btn-outline-primary btn-sm">Browse Events</a>
+                <a href="submitResult.jsp" class="btn btn-primary btn-sm">Submit Result</a>
+            </div>
+        </div>
+
         <div class="table-responsive bg-white p-3 shadow-sm rounded">
-            <table class="table table-hover align-middle">
+            <table class="table table-hover align-middle mb-0">
                 <thead class="table-primary">
                     <tr>
                         <th>Event Name</th>
@@ -53,38 +132,104 @@
                 </thead>
                 <tbody>
                     <%
-                        try {
-                            Connection conn = DBConnection.getConnection();
-                            // Guna JOIN untuk dapatkan nama event dari table events
-                            String query = "SELECT e.event_name, e.event_date, e.distance, r.registration_date, r.status " +
-                                           "FROM registrations r JOIN events e ON r.event_id = e.event_id " +
-                                           "WHERE r.user_id = 1"; // Hardcode ID user 1 dulu untuk testing
-                            PreparedStatement ps = conn.prepareStatement(query);
-                            ResultSet rs = ps.executeQuery();
-                            
-                            boolean hasData = false;
-                            while(rs.next()) {
-                                hasData = true;
+                        // Only the rows belonging to the signed in participant.
+                        String sql = "SELECT e.event_name, e.event_date, e.distance, "
+                                   + "r.registration_date, r.status "
+                                   + "FROM registrations r "
+                                   + "JOIN events e ON r.event_id = e.event_id "
+                                   + "WHERE r.user_id = ? "
+                                   + "ORDER BY e.event_date";
+
+                        try (Connection conn = DBConnection.getConnection();
+                             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+                            ps.setInt(1, currentUserId);
+
+                            try (ResultSet rs = ps.executeQuery()) {
+
+                                boolean hasData = false;
+                                while (rs.next()) {
+                                    hasData = true;
                     %>
                     <tr>
-                        <td class="fw-bold"><%= rs.getString("event_name") %></td>
-                        <td><%= rs.getString("event_date") %></td>
+                        <td class="fw-bold"><%= Web.esc(rs.getString("event_name")) %></td>
+                        <td><%= Web.esc(rs.getString("event_date")) %></td>
                         <td><span class="badge bg-secondary"><%= rs.getDouble("distance") %> KM</span></td>
                         <td><%= rs.getTimestamp("registration_date") %></td>
-                        <td><span class="badge bg-success"><%= rs.getString("status") %></span></td>
+                        <td><span class="badge bg-success"><%= Web.esc(rs.getString("status")) %></span></td>
                     </tr>
                     <%
+                                }
+
+                                if (!hasData) {
+                    %>
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            You have not registered for any events yet.
+                            <a href="events.jsp">Browse the available events</a>.
+                        </td>
+                    </tr>
+                    <%
+                                }
                             }
-                            if(!hasData) {
-                                out.println("<tr><td colspan='5' class='text-center text-muted py-4'>Anda belum mendaftar mana-mana event lagi.</td></tr>");
-                            }
-                        } catch(Exception e) {
-                            out.println("<tr><td colspan='5' class='text-danger'>Error: " + e.getMessage() + "</td></tr>");
+                        } catch (Exception e) {
+                            // The details go to the server log, not to the browser.
+                            application.log("Loading dashboard for user " + currentUserId, e);
+                    %>
+                    <tr>
+                        <td colspan="5" class="text-danger text-center py-4">
+                            Sorry, your registrations could not be loaded right now.
+                        </td>
+                    </tr>
+                    <%
                         }
                     %>
                 </tbody>
             </table>
         </div>
     </div>
+
+    <script>
+        /* Counts the personal totals up from zero, exactly as the admin
+           dashboard does. The real numbers are already in the HTML, so the
+           page is still correct if scripting is unavailable. */
+        (function () {
+            var reduceMotion = window.matchMedia
+                && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (reduceMotion || !window.requestAnimationFrame) {
+                return;
+            }
+
+            Array.prototype.forEach.call(
+                document.querySelectorAll('.stat-value[data-count]'),
+                function (el) {
+                    var target = parseInt(el.getAttribute('data-count'), 10);
+                    if (isNaN(target) || target === 0) {
+                        return;
+                    }
+
+                    var duration = 900;
+                    var started = null;
+
+                    function step(timestamp) {
+                        if (started === null) {
+                            started = timestamp;
+                        }
+                        var progress = Math.min((timestamp - started) / duration, 1);
+                        var eased = 1 - Math.pow(1 - progress, 3);
+                        el.textContent = Math.round(eased * target);
+                        if (progress < 1) {
+                            window.requestAnimationFrame(step);
+                        }
+                    }
+
+                    el.textContent = '0';
+                    window.requestAnimationFrame(step);
+                }
+            );
+        })();
+    </script>
+
 </body>
 </html>

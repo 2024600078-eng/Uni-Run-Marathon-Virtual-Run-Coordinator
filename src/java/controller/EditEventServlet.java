@@ -8,8 +8,12 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import util.DBConnection;
 
+/**
+ * Updates an existing marathon event. Administrators only.
+ */
 @WebServlet(name = "EditEventServlet", urlPatterns = {"/EditEventServlet"})
 public class EditEventServlet extends HttpServlet {
 
@@ -17,20 +21,55 @@ public class EditEventServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        int eventId = Integer.parseInt(request.getParameter("eventId"));
-        String eventName = request.getParameter("eventName");
-        String description = request.getParameter("description");
-        String eventDate = request.getParameter("eventDate");
-        double distance = Double.parseDouble(request.getParameter("distance"));
-        double fee = Double.parseDouble(request.getParameter("fee"));
+        HttpSession session = request.getSession(false);
 
+        if (session == null || session.getAttribute("userId") == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        if (!"admin".equals(session.getAttribute("role"))) {
+            response.sendRedirect("dashboard.jsp");
+            return;
+        }
+
+        int eventId;
         try {
+            eventId = Integer.parseInt(request.getParameter("eventId"));
+        } catch (NumberFormatException | NullPointerException e) {
+            response.sendRedirect("manageEvents.jsp?error=invalid");
+            return;
+        }
 
-            Connection conn = DBConnection.getConnection();
+        String eventName = trim(request.getParameter("eventName"));
+        String description = trim(request.getParameter("description"));
+        String eventDate = trim(request.getParameter("eventDate"));
 
-            String sql = "UPDATE events SET event_name=?, description=?, event_date=?, distance=?, fee=? WHERE event_id=?";
+        if (eventName.isEmpty() || eventDate.isEmpty()) {
+            response.sendRedirect("editEvent.jsp?id=" + eventId + "&error=empty");
+            return;
+        }
 
-            PreparedStatement ps = conn.prepareStatement(sql);
+        double distance;
+        double fee;
+        try {
+            distance = Double.parseDouble(request.getParameter("distance"));
+            fee = Double.parseDouble(request.getParameter("fee"));
+        } catch (NumberFormatException | NullPointerException e) {
+            response.sendRedirect("editEvent.jsp?id=" + eventId + "&error=number");
+            return;
+        }
+
+        if (distance <= 0 || fee < 0) {
+            response.sendRedirect("editEvent.jsp?id=" + eventId + "&error=range");
+            return;
+        }
+
+        String sql = "UPDATE events SET event_name = ?, description = ?, event_date = ?, "
+                   + "distance = ?, fee = ? WHERE event_id = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, eventName);
             ps.setString(2, description);
@@ -39,18 +78,26 @@ public class EditEventServlet extends HttpServlet {
             ps.setDouble(5, fee);
             ps.setInt(6, eventId);
 
-            ps.executeUpdate();
+            int updated = ps.executeUpdate();
 
-            ps.close();
-            conn.close();
-
-            response.sendRedirect("manageEvents.jsp");
+            if (updated > 0) {
+                response.sendRedirect("manageEvents.jsp?status=updated");
+            } else {
+                response.sendRedirect("manageEvents.jsp?error=notfound");
+            }
 
         } catch (Exception e) {
-
-            response.getWriter().println("<h2>Error Updating Event</h2>");
-            response.getWriter().println(e.getMessage());
-
+            log("Could not update event " + eventId, e);
+            response.sendRedirect("editEvent.jsp?id=" + eventId + "&error=db");
         }
+    }
+
+    private static String trim(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    @Override
+    public String getServletInfo() {
+        return "Updates an existing marathon event";
     }
 }

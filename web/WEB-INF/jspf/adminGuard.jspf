@@ -1,0 +1,22 @@
+<%
+    /*
+     * Access guard for administrator pages.
+     *
+     * Included as the very first line of every admin JSP, before any HTML is
+     * written, so that the redirect is still allowed to happen. Visitors who
+     * are not logged in are sent to the login page; participants who try to
+     * open an admin URL directly are sent back to their own dashboard.
+     *
+     * The whole file is a single scriptlet so that it contributes no
+     * whitespace of its own to the page.
+     */
+    if (session.getAttribute("userId") == null) {
+        response.sendRedirect("login.jsp");
+        return;
+    }
+
+    if (!"admin".equals(session.getAttribute("role"))) {
+        response.sendRedirect("dashboard.jsp");
+        return;
+    }
+%>

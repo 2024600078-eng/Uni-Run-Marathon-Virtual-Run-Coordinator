@@ -1,0 +1,18 @@
+<%
+    /*
+     * Access guard for pages that require any logged in user.
+     *
+     * Included as the very first line of the page, before any HTML is written.
+     * Also exposes the current user id as "currentUserId" so that each page can
+     * query only the rows that belong to the person who is signed in.
+     *
+     * The whole file is a single scriptlet so that it contributes no
+     * whitespace of its own to the page.
+     */
+    if (session.getAttribute("userId") == null) {
+        response.sendRedirect("login.jsp");
+        return;
+    }
+
+    int currentUserId = (Integer) session.getAttribute("userId");
+%>
