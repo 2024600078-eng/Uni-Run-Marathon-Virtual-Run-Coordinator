@@ -1,21 +1,24 @@
 package controller;
 
+import dao.EventDAO;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import util.DBConnection;
+import model.Event;
 
 /**
+ * CONTROLLER COMPONENT
+ *
  * Updates an existing marathon event. Administrators only.
  */
 @WebServlet(name = "EditEventServlet", urlPatterns = {"/EditEventServlet"})
 public class EditEventServlet extends HttpServlet {
+
+    private final EventDAO eventDAO = new EventDAO();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -65,22 +68,11 @@ public class EditEventServlet extends HttpServlet {
             return;
         }
 
-        String sql = "UPDATE events SET event_name = ?, description = ?, event_date = ?, "
-                   + "distance = ?, fee = ? WHERE event_id = ?";
+        try {
+            Event event = new Event(eventName, description, eventDate, distance, fee);
+            event.setEventId(eventId);
 
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, eventName);
-            ps.setString(2, description);
-            ps.setString(3, eventDate);
-            ps.setDouble(4, distance);
-            ps.setDouble(5, fee);
-            ps.setInt(6, eventId);
-
-            int updated = ps.executeUpdate();
-
-            if (updated > 0) {
+            if (eventDAO.update(event)) {
                 response.sendRedirect("manageEvents.jsp?status=updated");
             } else {
                 response.sendRedirect("manageEvents.jsp?error=notfound");

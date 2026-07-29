@@ -1,24 +1,24 @@
 package controller;
 
+import dao.UserDAO;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import util.DBConnection;
 
 /**
- * Lets an administrator remove a participant account.
+ * CONTROLLER COMPONENT
  *
- * The foreign keys on registrations and results are declared ON DELETE CASCADE,
- * so the participant's registrations and submitted results go with them.
+ * Lets an administrator remove a participant account. The cascading foreign
+ * keys mean their registrations and results go with them.
  */
 @WebServlet(name = "DeleteParticipantServlet", urlPatterns = {"/DeleteParticipantServlet"})
 public class DeleteParticipantServlet extends HttpServlet {
+
+    private final UserDAO userDAO = new UserDAO();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -44,26 +44,16 @@ public class DeleteParticipantServlet extends HttpServlet {
             return;
         }
 
-        // An administrator must not be able to delete their own account, or any
-        // other administrator, from this screen.
+        // An administrator must not be able to delete their own account from
+        // this screen. The DAO additionally refuses to delete any admin row.
         Integer currentUserId = (Integer) session.getAttribute("userId");
         if (currentUserId != null && currentUserId.intValue() == userId) {
             response.sendRedirect("manageParticipants.jsp?error=protected");
             return;
         }
 
-        // The role condition in the statement means an administrator row can
-        // never be removed here, even if its id is supplied by hand.
-        String sql = "DELETE FROM users WHERE user_id = ? AND role = 'participant'";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setInt(1, userId);
-
-            int deleted = ps.executeUpdate();
-
-            if (deleted > 0) {
+        try {
+            if (userDAO.deleteParticipant(userId)) {
                 response.sendRedirect("manageParticipants.jsp?status=deleted");
             } else {
                 response.sendRedirect("manageParticipants.jsp?error=protected");

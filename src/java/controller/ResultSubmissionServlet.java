@@ -1,10 +1,9 @@
 package controller;
 
+import dao.RegistrationDAO;
+import dao.ResultDAO;
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -17,17 +16,19 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.Part;
-import util.DBConnection;
+import model.Result;
 import util.UploadStore;
 
 /**
+ * CONTROLLER COMPONENT
+ *
  * Records a race result submitted by a participant, together with the proof
  * image they uploaded.
  *
  * A participant gets one result per registration. If an administrator rejects
- * that result they are allowed to send a corrected one, which replaces the
- * rejected entry and puts it back in the queue as Pending. While a result is
- * Pending or already Approved, no further submission is accepted.
+ * that result they may send a corrected one, which replaces the rejected entry
+ * and returns it to the queue as Pending. While a result is Pending or already
+ * Approved, no further submission is accepted.
  */
 @WebServlet(name = "ResultSubmissionServlet", urlPatterns = {"/ResultSubmissionServlet"})
 @MultipartConfig(
@@ -46,6 +47,9 @@ public class ResultSubmissionServlet extends HttpServlet {
 
     /** Accepts h:mm:ss or hh:mm:ss. */
     private static final String DURATION_PATTERN = "^\\d{1,2}:[0-5]\\d:[0-5]\\d$";
+
+    private final RegistrationDAO registrationDAO = new RegistrationDAO();
+    private final ResultDAO resultDAO = new ResultDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -94,27 +98,21 @@ public class ResultSubmissionServlet extends HttpServlet {
         }
         duration = duration.trim();
 
-        try (Connection conn = DBConnection.getConnection()) {
-
-            // The registration id arrives from a form field, so confirm it
-            // really belongs to the person who is signed in. Otherwise one
-            // participant could file a result against somebody else's entry.
-            if (!registrationBelongsToUser(conn, registrationId, userId)) {
+        try {
+            // The registration id arrives from a form field, so confirm with
+            // the Model that it belongs to the person who is signed in.
+            if (!registrationDAO.belongsToUser(registrationId, userId)) {
                 fail(request, response, "That event registration does not belong to your account.");
                 return;
             }
 
-            ExistingResult existing = findExistingResult(conn, registrationId);
+            Result existing = resultDAO.findByRegistration(registrationId);
 
-            if (existing != null && !"Rejected".equalsIgnoreCase(existing.approvalStatus)) {
-                if ("Approved".equalsIgnoreCase(existing.approvalStatus)) {
-                    fail(request, response,
-                            "Your result for this event has already been approved.");
-                } else {
-                    fail(request, response,
-                            "You have already submitted a result for this event. "
+            if (existing != null && !existing.isRejected()) {
+                fail(request, response, existing.isApproved()
+                        ? "Your result for this event has already been approved."
+                        : "You have already submitted a result for this event. "
                           + "Please wait for it to be reviewed.");
-                }
                 return;
             }
 
@@ -141,97 +139,20 @@ public class ResultSubmissionServlet extends HttpServlet {
             filePart.write(target.getAbsolutePath());
 
             if (existing == null) {
-                insertResult(conn, registrationId, distanceAchieved, duration, storedFileName);
+                resultDAO.insert(registrationId, distanceAchieved, duration, storedFileName);
                 response.sendRedirect("viewResultStatus.jsp?status=submitted");
             } else {
                 // Replacing a rejected entry: update it in place and return it
                 // to the review queue.
-                updateRejectedResult(conn, existing.resultId, distanceAchieved,
-                                     duration, storedFileName);
-                UploadStore.deleteQuietly(existing.proofImage);
+                resultDAO.replaceRejected(existing.getResultId(), distanceAchieved,
+                                          duration, storedFileName);
+                UploadStore.deleteQuietly(existing.getProofImage());
                 response.sendRedirect("viewResultStatus.jsp?status=resubmitted");
             }
 
         } catch (Exception e) {
             log("Could not save result for registration " + registrationId, e);
             fail(request, response, "Sorry, the result could not be saved. Please try again.");
-        }
-    }
-
-    /** The state of a result that already exists for a registration. */
-    private static final class ExistingResult {
-        private final int resultId;
-        private final String approvalStatus;
-        private final String proofImage;
-
-        private ExistingResult(int resultId, String approvalStatus, String proofImage) {
-            this.resultId = resultId;
-            this.approvalStatus = approvalStatus;
-            this.proofImage = proofImage;
-        }
-    }
-
-    private ExistingResult findExistingResult(Connection conn, int registrationId)
-            throws Exception {
-
-        String sql = "SELECT result_id, approval_status, proof_image "
-                   + "FROM results WHERE registration_id = ?";
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, registrationId);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) {
-                    return null;
-                }
-                return new ExistingResult(
-                        rs.getInt("result_id"),
-                        rs.getString("approval_status"),
-                        rs.getString("proof_image"));
-            }
-        }
-    }
-
-    private void insertResult(Connection conn, int registrationId, double distance,
-                              String duration, String proofImage) throws Exception {
-
-        String sql = "INSERT INTO results (registration_id, distance_achieved, duration, "
-                   + "proof_image, approval_status) VALUES (?, ?, ?, ?, 'Pending')";
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, registrationId);
-            ps.setDouble(2, distance);
-            ps.setString(3, duration);
-            ps.setString(4, proofImage);
-            ps.executeUpdate();
-        }
-    }
-
-    private void updateRejectedResult(Connection conn, int resultId, double distance,
-                                      String duration, String proofImage) throws Exception {
-
-        String sql = "UPDATE results SET distance_achieved = ?, duration = ?, proof_image = ?, "
-                   + "approval_status = 'Pending', submission_date = CURRENT_TIMESTAMP "
-                   + "WHERE result_id = ?";
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setDouble(1, distance);
-            ps.setString(2, duration);
-            ps.setString(3, proofImage);
-            ps.setInt(4, resultId);
-            ps.executeUpdate();
-        }
-    }
-
-    private boolean registrationBelongsToUser(Connection conn, int registrationId, int userId)
-            throws Exception {
-        String sql = "SELECT 1 FROM registrations WHERE registration_id = ? AND user_id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, registrationId);
-            ps.setInt(2, userId);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
         }
     }
 
@@ -269,9 +190,7 @@ public class ResultSubmissionServlet extends HttpServlet {
         return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
-    /**
-     * Shows the submission form again with an explanation of what went wrong.
-     */
+    /** Shows the submission form again with an explanation of what went wrong. */
     private void fail(HttpServletRequest request, HttpServletResponse response, String message)
             throws ServletException, IOException {
         request.setAttribute("error", message);

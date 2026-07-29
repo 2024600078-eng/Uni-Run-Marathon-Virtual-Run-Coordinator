@@ -1,22 +1,29 @@
 package controller;
 
+import dao.EventDAO;
+import dao.RegistrationDAO;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import util.DBConnection;
 
 /**
+ * CONTROLLER COMPONENT
+ *
  * Registers the signed in participant for an event.
+ *
+ * A clear example of the controller holding the system logic: it asks the
+ * Model whether the event exists and whether the participant already joined
+ * it, and only then asks the Model to store the registration.
  */
 @WebServlet(name = "RegisterEventServlet", urlPatterns = {"/RegisterEventServlet"})
 public class RegisterEventServlet extends HttpServlet {
+
+    private final EventDAO eventDAO = new EventDAO();
+    private final RegistrationDAO registrationDAO = new RegistrationDAO();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -39,53 +46,25 @@ public class RegisterEventServlet extends HttpServlet {
             return;
         }
 
-        try (Connection conn = DBConnection.getConnection()) {
-
-            if (!eventExists(conn, eventId)) {
+        try {
+            if (!eventDAO.exists(eventId)) {
                 response.sendRedirect("events.jsp?error=notfound");
                 return;
             }
 
             // Without this check a participant could join the same event again
             // every time they pressed the button.
-            if (alreadyRegistered(conn, userId, eventId)) {
+            if (registrationDAO.exists(userId, eventId)) {
                 response.sendRedirect("events.jsp?error=duplicate");
                 return;
             }
 
-            String sql = "INSERT INTO registrations (user_id, event_id, status) VALUES (?, ?, 'Registered')";
-
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setInt(1, userId);
-                ps.setInt(2, eventId);
-                ps.executeUpdate();
-            }
-
+            registrationDAO.insert(userId, eventId);
             response.sendRedirect("dashboard.jsp?status=success");
 
         } catch (Exception e) {
             log("Could not register user " + userId + " for event " + eventId, e);
             response.sendRedirect("events.jsp?error=db");
-        }
-    }
-
-    private boolean eventExists(Connection conn, int eventId) throws Exception {
-        try (PreparedStatement ps = conn.prepareStatement("SELECT 1 FROM events WHERE event_id = ?")) {
-            ps.setInt(1, eventId);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
-        }
-    }
-
-    private boolean alreadyRegistered(Connection conn, int userId, int eventId) throws Exception {
-        String sql = "SELECT 1 FROM registrations WHERE user_id = ? AND event_id = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, userId);
-            ps.setInt(2, eventId);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
         }
     }
 

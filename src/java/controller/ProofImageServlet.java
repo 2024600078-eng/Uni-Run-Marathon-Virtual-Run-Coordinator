@@ -1,34 +1,35 @@
 package controller;
 
+import dao.ResultDAO;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import util.DBConnection;
 import util.UploadStore;
 
 /**
+ * CONTROLLER COMPONENT
+ *
  * Serves a proof image from the upload folder.
  *
  * The folder sits outside the application so that rebuilding the project does
  * not delete the images, which also means nothing there is reachable by URL on
- * its own. Every request therefore passes through this servlet, which only
- * returns an image to the participant who submitted it or to an administrator.
+ * its own. Every request therefore passes through this controller, which asks
+ * the Model who the image belongs to before returning it.
  */
 @WebServlet(name = "ProofImageServlet", urlPatterns = {"/proof"})
 public class ProofImageServlet extends HttpServlet {
 
     private static final int BUFFER_SIZE = 8192;
+
+    private final ResultDAO resultDAO = new ResultDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -54,7 +55,7 @@ public class ProofImageServlet extends HttpServlet {
         boolean isAdmin = "admin".equals(session.getAttribute("role"));
 
         try {
-            if (!isAdmin && !belongsToUser(fileName, userId)) {
+            if (!isAdmin && !resultDAO.proofBelongsToUser(fileName, userId)) {
                 // A participant asking for somebody else's proof is told the
                 // same thing as if the image did not exist.
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -86,26 +87,6 @@ public class ProofImageServlet extends HttpServlet {
             int read;
             while ((read = in.read(buffer)) != -1) {
                 out.write(buffer, 0, read);
-            }
-        }
-    }
-
-    /**
-     * True when the image belongs to a result submitted by this participant.
-     */
-    private boolean belongsToUser(String fileName, int userId) throws Exception {
-        String sql = "SELECT 1 FROM results r "
-                   + "JOIN registrations reg ON r.registration_id = reg.registration_id "
-                   + "WHERE r.proof_image = ? AND reg.user_id = ?";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, fileName);
-            ps.setInt(2, userId);
-
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
             }
         }
     }

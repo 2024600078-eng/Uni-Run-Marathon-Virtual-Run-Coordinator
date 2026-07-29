@@ -1,11 +1,28 @@
-<%@page import="java.sql.*"%>
-<%@page import="util.DBConnection"%>
+<%@page import="java.util.List"%>
+<%@page import="dao.EventDAO"%>
+<%@page import="model.Event"%>
 <%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%--
+    VIEW COMPONENT
+
+    Displays the list of available events.
+
+    This page contains no SQL. It asks the Model, through EventDAO, for a list
+    of Event objects and is responsible only for presenting them.
+--%>
 <%
-    // This page is open to visitors, but the navigation and the join button
-    // change depending on whether somebody is signed in.
     boolean loggedIn = session.getAttribute("userId") != null;
+
+    List<Event> events = null;
+    boolean loadFailed = false;
+
+    try {
+        events = new EventDAO().findAll();
+    } catch (Exception e) {
+        loadFailed = true;
+        application.log("Loading the events list", e);
+    }
 %>
 <!DOCTYPE html>
 <html>
@@ -68,41 +85,55 @@
         </div>
 
         <div class="row">
-            <%
-                String sql = "SELECT event_id, event_name, description, event_date, distance, fee "
-                           + "FROM events ORDER BY event_date";
-
-                try (Connection conn = DBConnection.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql);
-                     ResultSet rs = ps.executeQuery()) {
-
-                    boolean hasEvents = false;
-                    while (rs.next()) {
-                        hasEvents = true;
-            %>
-
+        <%
+            if (loadFailed) {
+        %>
+            <div class="col-12">
+                <p class="text-center text-danger py-4">
+                    Sorry, the events could not be loaded right now.
+                </p>
+            </div>
+        <%
+            } else if (events.isEmpty()) {
+        %>
+            <div class="col-12">
+                <p class="text-center text-muted py-4">
+                    There are no events available at the moment. Please check back later.
+                </p>
+            </div>
+        <%
+            } else {
+                for (Event event : events) {
+        %>
             <div class="col-md-4 mb-4 event-card">
                 <div class="card h-100 shadow-sm">
                     <div class="card-body">
                         <h5 class="card-title fw-bold text-dark">
-                            <%= Web.esc(rs.getString("event_name")) %>
+                            <%= Web.esc(event.getEventName()) %>
                         </h5>
 
                         <p class="card-text text-muted">
-                            <%= Web.esc(rs.getString("description")) %>
+                            <%= Web.esc(event.getDescription()) %>
                         </p>
 
                         <ul class="list-unstyled mb-0">
-                            <li><strong>&#128197; Date:</strong> <%= Web.esc(rs.getString("event_date")) %></li>
-                            <li><strong>&#127939; Distance:</strong> <%= rs.getDouble("distance") %> KM</li>
-                            <li><strong>&#128176; Fee:</strong> RM <%= String.format("%.2f", rs.getDouble("fee")) %></li>
+                            <li><strong>&#128197; Date:</strong> <%= Web.esc(event.getEventDate()) %></li>
+                            <li><strong>&#127939; Distance:</strong> <%= event.getDistance() %> KM</li>
+                            <li>
+                                <strong>&#128176; Fee:</strong>
+                                <% if (event.isFree()) { %>
+                                    <span class="badge bg-success">Free</span>
+                                <% } else { %>
+                                    RM <%= String.format("%.2f", event.getFee()) %>
+                                <% } %>
+                            </li>
                         </ul>
                     </div>
 
                     <div class="card-footer bg-white border-top-0">
                         <% if (loggedIn) { %>
                             <form action="RegisterEventServlet" method="post">
-                                <input type="hidden" name="eventId" value="<%= rs.getInt("event_id") %>">
+                                <input type="hidden" name="eventId" value="<%= event.getEventId() %>">
                                 <button type="submit" class="btn btn-primary w-100 fw-bold">
                                     Join Event
                                 </button>
@@ -115,30 +146,10 @@
                     </div>
                 </div>
             </div>
-
-            <%
-                    }
-
-                    if (!hasEvents) {
-            %>
-            <div class="col-12">
-                <p class="text-center text-muted py-4">
-                    There are no events available at the moment. Please check back later.
-                </p>
-            </div>
-            <%
-                    }
-                } catch (Exception e) {
-                    application.log("Loading the events list", e);
-            %>
-            <div class="col-12">
-                <p class="text-center text-danger py-4">
-                    Sorry, the events could not be loaded right now.
-                </p>
-            </div>
-            <%
+        <%
                 }
-            %>
+            }
+        %>
         </div>
     </div>
 

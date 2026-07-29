@@ -1,12 +1,19 @@
 <%@include file="/WEB-INF/jspf/participantGuard.jspf" %>
-<%@page import="java.sql.*"%>
 <%@page import="java.text.SimpleDateFormat"%>
-<%@page import="util.DBConnection"%>
+<%@page import="dao.ResultDAO"%>
+<%@page import="model.Result"%>
 <%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%--
+    VIEW COMPONENT
+
+    The finisher certificate for one approved result.
+
+    The result and the finishing position both come from ResultDAO. This page
+    contains no SQL; it checks the answer it was given and lays out the
+    document.
+--%>
 <%
-    // A certificate exists only for an approved result. A participant may see
-    // their own; an administrator may see any.
     boolean viewerIsAdmin = "admin".equals(session.getAttribute("role"));
 
     int resultId;
@@ -17,77 +24,31 @@
         return;
     }
 
-    String runnerName = null;
-    String eventName = null;
-    String eventDate = null;
-    String duration = null;
-    double distanceAchieved = 0;
-    java.sql.Timestamp submittedOn = null;
-    int position = 0;
+    Result result;
+    int position;
 
-    String detailSql =
-          "SELECT u.full_name, u.user_id, e.event_id, e.event_name, e.event_date, "
-        + "r.distance_achieved, r.duration, r.approval_status, r.submission_date, "
-        + "TIME_TO_SEC(r.duration) AS seconds "
-        + "FROM results r "
-        + "JOIN registrations reg ON r.registration_id = reg.registration_id "
-        + "JOIN users u ON reg.user_id = u.user_id "
-        + "JOIN events e ON reg.event_id = e.event_id "
-        + "WHERE r.result_id = ?";
+    try {
+        ResultDAO resultDAO = new ResultDAO();
+        result = resultDAO.findForCertificate(resultId);
 
-    try (Connection conn = DBConnection.getConnection();
-         PreparedStatement ps = conn.prepareStatement(detailSql)) {
-
-        ps.setInt(1, resultId);
-
-        try (ResultSet rs = ps.executeQuery()) {
-
-            if (!rs.next()) {
-                response.sendRedirect("viewResultStatus.jsp?error=notfound");
-                return;
-            }
-
-            // Ownership check: without this, changing the number in the address
-            // bar would show somebody else's certificate.
-            if (!viewerIsAdmin && rs.getInt("user_id") != currentUserId) {
-                response.sendRedirect("viewResultStatus.jsp?error=notfound");
-                return;
-            }
-
-            if (!"Approved".equalsIgnoreCase(rs.getString("approval_status"))) {
-                response.sendRedirect("viewResultStatus.jsp?error=notapproved");
-                return;
-            }
-
-            runnerName = rs.getString("full_name");
-            eventName = rs.getString("event_name");
-            eventDate = rs.getString("event_date");
-            duration = rs.getString("duration");
-            distanceAchieved = rs.getDouble("distance_achieved");
-            submittedOn = rs.getTimestamp("submission_date");
-
-            int eventId = rs.getInt("event_id");
-            long seconds = rs.getLong("seconds");
-
-            // Finishing position: how many approved runners in this event were
-            // faster, plus one.
-            String rankSql =
-                  "SELECT COUNT(*) + 1 AS position FROM results r2 "
-                + "JOIN registrations reg2 ON r2.registration_id = reg2.registration_id "
-                + "WHERE reg2.event_id = ? AND r2.approval_status = 'Approved' "
-                + "AND TIME_TO_SEC(r2.duration) < ?";
-
-            try (PreparedStatement rankPs = conn.prepareStatement(rankSql)) {
-                rankPs.setInt(1, eventId);
-                rankPs.setLong(2, seconds);
-
-                try (ResultSet rankRs = rankPs.executeQuery()) {
-                    if (rankRs.next()) {
-                        position = rankRs.getInt("position");
-                    }
-                }
-            }
+        if (result == null) {
+            response.sendRedirect("viewResultStatus.jsp?error=notfound");
+            return;
         }
+
+        // Ownership check: without this, changing the number in the address
+        // bar would show somebody else's certificate.
+        if (!viewerIsAdmin && result.getOwnerUserId() != currentUserId) {
+            response.sendRedirect("viewResultStatus.jsp?error=notfound");
+            return;
+        }
+
+        if (!result.isApproved()) {
+            response.sendRedirect("viewResultStatus.jsp?error=notapproved");
+            return;
+        }
+
+        position = resultDAO.findPositionInEvent(result.getEventId(), result.getDurationSeconds());
 
     } catch (Exception e) {
         application.log("Loading certificate for result " + resultId, e);
@@ -95,9 +56,9 @@
         return;
     }
 
-    String issuedOn = submittedOn == null
+    String issuedOn = result.getSubmissionDate() == null
             ? ""
-            : new SimpleDateFormat("d MMMM yyyy").format(submittedOn);
+            : new SimpleDateFormat("d MMMM yyyy").format(result.getSubmissionDate());
 
     String positionLabel;
     if (position == 1) {
@@ -154,21 +115,21 @@
             <h1 class="certificate-title">Certificate of Completion</h1>
             <p class="certificate-subtitle">This is presented to</p>
 
-            <p class="certificate-name"><%= Web.esc(runnerName) %></p>
+            <p class="certificate-name"><%= Web.esc(result.getParticipantName()) %></p>
 
             <p class="certificate-event">
                 for successfully completing<br>
-                <strong><%= Web.esc(eventName) %></strong>
+                <strong><%= Web.esc(result.getEventName()) %></strong>
             </p>
 
             <div class="certificate-facts">
                 <div class="certificate-fact">
-                    <strong><%= distanceAchieved %> km</strong>
+                    <strong><%= result.getDistanceAchieved() %> km</strong>
                     <span>Distance</span>
                 </div>
 
                 <div class="certificate-fact">
-                    <strong><%= Web.esc(duration) %></strong>
+                    <strong><%= Web.esc(result.getDuration()) %></strong>
                     <span>Finish Time</span>
                 </div>
 
@@ -178,7 +139,7 @@
                 </div>
 
                 <div class="certificate-fact">
-                    <strong><%= Web.esc(eventDate) %></strong>
+                    <strong><%= Web.esc(result.getEventDate()) %></strong>
                     <span>Event Date</span>
                 </div>
             </div>
@@ -190,7 +151,7 @@
 
                 <div>
                     Issued <%= Web.esc(issuedOn) %><br>
-                    Certificate reference UR-<%= resultId %>
+                    Certificate reference UR-<%= result.getResultId() %>
                 </div>
             </div>
 

@@ -1,8 +1,26 @@
 <%@include file="/WEB-INF/jspf/adminGuard.jspf" %>
-<%@page import="java.sql.*"%>
-<%@page import="util.DBConnection"%>
+<%@page import="java.util.List"%>
+<%@page import="dao.ResultDAO"%>
+<%@page import="model.Result"%>
 <%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%--
+    VIEW COMPONENT
+
+    The administrator's approval queue. Rows come from ResultDAO already
+    sorted with the Pending submissions first; this page contains no SQL.
+--%>
+<%
+    List<Result> submissions = null;
+    boolean loadFailed = false;
+
+    try {
+        submissions = new ResultDAO().findAllForApproval();
+    } catch (Exception e) {
+        loadFailed = true;
+        application.log("Loading result submissions for an administrator", e);
+    }
+%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -83,45 +101,44 @@
 
         <tbody>
         <%
-            String sql = "SELECT r.result_id, u.full_name, e.event_name, r.distance_achieved, "
-                       + "r.duration, r.proof_image, r.approval_status "
-                       + "FROM results r "
-                       + "JOIN registrations reg ON r.registration_id = reg.registration_id "
-                       + "JOIN users u ON reg.user_id = u.user_id "
-                       + "JOIN events e ON reg.event_id = e.event_id "
-                       + "ORDER BY FIELD(r.approval_status, 'Pending', 'Approved', 'Rejected'), r.result_id";
-
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql);
-                 ResultSet rs = ps.executeQuery()) {
-
-                boolean found = false;
-                while (rs.next()) {
-                    found = true;
-
-                    int resultId = rs.getInt("result_id");
-                    String approvalStatus = rs.getString("approval_status");
-                    String proofImage = rs.getString("proof_image");
+            if (loadFailed) {
+        %>
+            <tr>
+                <td colspan="8" class="text-danger text-center py-4">
+                    Sorry, the submissions could not be loaded right now.
+                </td>
+            </tr>
+        <%
+            } else if (submissions.isEmpty()) {
+        %>
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    No participant submissions found.
+                </td>
+            </tr>
+        <%
+            } else {
+                for (Result submission : submissions) {
 
                     String badgeClass = "bg-secondary";
-                    if ("Approved".equalsIgnoreCase(approvalStatus)) {
+                    if (submission.isApproved()) {
                         badgeClass = "bg-success";
-                    } else if ("Pending".equalsIgnoreCase(approvalStatus)) {
+                    } else if (submission.isPending()) {
                         badgeClass = "bg-warning text-dark";
-                    } else if ("Rejected".equalsIgnoreCase(approvalStatus)) {
+                    } else if (submission.isRejected()) {
                         badgeClass = "bg-danger";
                     }
         %>
             <tr class="result-row">
-                <td><%= resultId %></td>
-                <td><%= Web.esc(rs.getString("full_name")) %></td>
-                <td><%= Web.esc(rs.getString("event_name")) %></td>
-                <td><%= rs.getDouble("distance_achieved") %> KM</td>
-                <td><%= Web.esc(rs.getString("duration")) %></td>
+                <td><%= submission.getResultId() %></td>
+                <td><%= Web.esc(submission.getParticipantName()) %></td>
+                <td><%= Web.esc(submission.getEventName()) %></td>
+                <td><%= submission.getDistanceAchieved() %> KM</td>
+                <td><%= Web.esc(submission.getDuration()) %></td>
                 <td>
-                    <% if (proofImage != null) { %>
-                        <a href="proof?file=<%= Web.esc(proofImage) %>" target="_blank">
-                            <img src="proof?file=<%= Web.esc(proofImage) %>"
+                    <% if (submission.hasProofImage()) { %>
+                        <a href="proof?file=<%= Web.esc(submission.getProofImage()) %>" target="_blank">
+                            <img src="proof?file=<%= Web.esc(submission.getProofImage()) %>"
                                  alt="Proof of run" width="70" class="rounded">
                         </a>
                     <% } else { %>
@@ -129,20 +146,23 @@
                     <% } %>
                 </td>
                 <td>
-                    <span class="badge <%= badgeClass %>"><%= Web.esc(approvalStatus) %></span>
+                    <span class="badge <%= badgeClass %>">
+                        <%= Web.esc(submission.getApprovalStatus()) %>
+                    </span>
                 </td>
                 <td>
                     <div class="d-flex gap-2">
                         <%-- Approving changes stored data, so each button posts
-                             a form instead of following a plain link. --%>
+                             a form to the Controller instead of following a
+                             plain link. --%>
                         <form action="ApproveResultServlet" method="post">
-                            <input type="hidden" name="id" value="<%= resultId %>">
+                            <input type="hidden" name="id" value="<%= submission.getResultId() %>">
                             <input type="hidden" name="status" value="Approved">
                             <button type="submit" class="btn btn-success btn-sm">Approve</button>
                         </form>
 
                         <form action="ApproveResultServlet" method="post">
-                            <input type="hidden" name="id" value="<%= resultId %>">
+                            <input type="hidden" name="id" value="<%= submission.getResultId() %>">
                             <input type="hidden" name="status" value="Rejected">
                             <button type="submit" class="btn btn-danger btn-sm">Reject</button>
                         </form>
@@ -151,25 +171,6 @@
             </tr>
         <%
                 }
-
-                if (!found) {
-        %>
-            <tr>
-                <td colspan="8" class="text-center text-muted py-4">
-                    No participant submissions found.
-                </td>
-            </tr>
-        <%
-                }
-            } catch (Exception e) {
-                application.log("Loading result submissions for an administrator", e);
-        %>
-            <tr>
-                <td colspan="8" class="text-danger text-center py-4">
-                    Sorry, the submissions could not be loaded right now.
-                </td>
-            </tr>
-        <%
             }
         %>
         </tbody>

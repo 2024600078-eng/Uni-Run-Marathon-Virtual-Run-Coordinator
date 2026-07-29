@@ -1,8 +1,28 @@
 <%@include file="/WEB-INF/jspf/adminGuard.jspf" %>
-<%@page import="java.sql.*"%>
-<%@page import="util.DBConnection"%>
+<%@page import="java.util.List"%>
+<%@page import="dao.UserDAO"%>
+<%@page import="model.ParticipantSummary"%>
 <%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%--
+    VIEW COMPONENT
+
+    Lists every participant with a summary of their activity.
+
+    The counts are worked out by the query inside UserDAO, so this page
+    receives finished numbers and contains no SQL.
+--%>
+<%
+    List<ParticipantSummary> participants = null;
+    boolean loadFailed = false;
+
+    try {
+        participants = new UserDAO().findAllParticipants();
+    } catch (Exception e) {
+        loadFailed = true;
+        application.log("Loading the participant list", e);
+    }
+%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -92,69 +112,7 @@
 
                 <tbody>
                 <%
-                    // Each participant is listed with a count of the events they
-                    // joined, how many results they sent in, and how many of
-                    // those were approved.
-                    String sql =
-                          "SELECT u.user_id, u.full_name, u.email, u.created_at, "
-                        + "(SELECT COUNT(*) FROM registrations r WHERE r.user_id = u.user_id) AS events_joined, "
-                        + "(SELECT COUNT(*) FROM results res "
-                        + " JOIN registrations r2 ON res.registration_id = r2.registration_id "
-                        + " WHERE r2.user_id = u.user_id) AS results_submitted, "
-                        + "(SELECT COUNT(*) FROM results res "
-                        + " JOIN registrations r2 ON res.registration_id = r2.registration_id "
-                        + " WHERE r2.user_id = u.user_id AND res.approval_status = 'Approved') AS results_approved "
-                        + "FROM users u WHERE u.role = 'participant' "
-                        + "ORDER BY u.full_name";
-
-                    try (Connection conn = DBConnection.getConnection();
-                         PreparedStatement ps = conn.prepareStatement(sql);
-                         ResultSet rs = ps.executeQuery()) {
-
-                        boolean any = false;
-                        while (rs.next()) {
-                            any = true;
-                            int userId = rs.getInt("user_id");
-                %>
-                    <tr class="participant-row">
-                        <td><%= userId %></td>
-                        <td class="fw-bold"><%= Web.esc(rs.getString("full_name")) %></td>
-                        <td><%= Web.esc(rs.getString("email")) %></td>
-                        <td class="text-center">
-                            <span class="badge bg-secondary"><%= rs.getInt("events_joined") %></span>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-secondary"><%= rs.getInt("results_submitted") %></span>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge bg-success"><%= rs.getInt("results_approved") %></span>
-                        </td>
-                        <td class="text-muted"><%= rs.getTimestamp("created_at") %></td>
-                        <td>
-                            <%-- Removing an account also removes its registrations
-                                 and results, because of the ON DELETE CASCADE
-                                 foreign keys. --%>
-                            <form action="DeleteParticipantServlet" method="post"
-                                  onsubmit="return confirm('Remove this participant? Their registrations and submitted results will be deleted too.');">
-                                <input type="hidden" name="id" value="<%= userId %>">
-                                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                            </form>
-                        </td>
-                    </tr>
-                <%
-                        }
-
-                        if (!any) {
-                %>
-                    <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
-                            No participants have registered yet.
-                        </td>
-                    </tr>
-                <%
-                        }
-                    } catch (Exception e) {
-                        application.log("Loading the participant list", e);
+                    if (loadFailed) {
                 %>
                     <tr>
                         <td colspan="8" class="text-danger text-center py-4">
@@ -162,6 +120,44 @@
                         </td>
                     </tr>
                 <%
+                    } else if (participants.isEmpty()) {
+                %>
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No participants have registered yet.
+                        </td>
+                    </tr>
+                <%
+                    } else {
+                        for (ParticipantSummary participant : participants) {
+                %>
+                    <tr class="participant-row">
+                        <td><%= participant.getUserId() %></td>
+                        <td class="fw-bold"><%= Web.esc(participant.getFullName()) %></td>
+                        <td><%= Web.esc(participant.getEmail()) %></td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary"><%= participant.getEventsJoined() %></span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary"><%= participant.getResultsSubmitted() %></span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-success"><%= participant.getResultsApproved() %></span>
+                        </td>
+                        <td class="text-muted"><%= participant.getCreatedAt() %></td>
+                        <td>
+                            <%-- Removing an account also removes its registrations
+                                 and results, because of the ON DELETE CASCADE
+                                 foreign keys. --%>
+                            <form action="DeleteParticipantServlet" method="post"
+                                  onsubmit="return confirm('Remove this participant? Their registrations and submitted results will be deleted too.');">
+                                <input type="hidden" name="id" value="<%= participant.getUserId() %>">
+                                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                <%
+                        }
                     }
                 %>
                 </tbody>

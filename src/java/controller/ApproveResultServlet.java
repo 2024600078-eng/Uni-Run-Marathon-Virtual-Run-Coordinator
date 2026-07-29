@@ -1,8 +1,7 @@
 package controller;
 
+import dao.ResultDAO;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.util.Arrays;
 import java.util.List;
 import javax.servlet.ServletException;
@@ -11,16 +10,21 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import util.DBConnection;
+import model.Result;
 
 /**
+ * CONTROLLER COMPONENT
+ *
  * Lets an administrator approve or reject a result submitted by a participant.
  */
 @WebServlet(name = "ApproveResultServlet", urlPatterns = {"/ApproveResultServlet"})
 public class ApproveResultServlet extends HttpServlet {
 
     /** Only these two values may ever be written to results.approval_status. */
-    private static final List<String> ALLOWED_STATUS = Arrays.asList("Approved", "Rejected");
+    private static final List<String> ALLOWED_STATUS =
+            Arrays.asList(Result.APPROVED, Result.REJECTED);
+
+    private final ResultDAO resultDAO = new ResultDAO();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -41,7 +45,7 @@ public class ApproveResultServlet extends HttpServlet {
         int resultId;
         try {
             resultId = Integer.parseInt(request.getParameter("id"));
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException | NullPointerException e) {
             response.sendRedirect("approveResults.jsp?error=invalid");
             return;
         }
@@ -52,17 +56,8 @@ public class ApproveResultServlet extends HttpServlet {
             return;
         }
 
-        String sql = "UPDATE results SET approval_status = ? WHERE result_id = ?";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, status);
-            ps.setInt(2, resultId);
-
-            int updated = ps.executeUpdate();
-
-            if (updated > 0) {
+        try {
+            if (resultDAO.updateStatus(resultId, status)) {
                 response.sendRedirect("approveResults.jsp?status=" + status.toLowerCase());
             } else {
                 response.sendRedirect("approveResults.jsp?error=notfound");

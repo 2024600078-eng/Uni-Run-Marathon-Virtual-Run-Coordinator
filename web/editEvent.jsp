@@ -1,11 +1,15 @@
 <%@include file="/WEB-INF/jspf/adminGuard.jspf" %>
-<%@page import="java.sql.*"%>
-<%@page import="util.DBConnection"%>
+<%@page import="dao.EventDAO"%>
+<%@page import="model.Event"%>
 <%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%--
+    VIEW COMPONENT
+
+    Shows the edit form for one event, filled with its current values.
+    The event is fetched from EventDAO; this page contains no SQL.
+--%>
 <%
-    // Everything that could fail is handled here, before any HTML is written,
-    // so that the page can still redirect if the event cannot be loaded.
     int eventId;
     try {
         eventId = Integer.parseInt(request.getParameter("id"));
@@ -14,38 +18,19 @@
         return;
     }
 
-    String eventName;
-    String eventDescription;
-    String eventDate;
-    double eventDistance;
-    double eventFee;
-
-    try (Connection conn = DBConnection.getConnection();
-         PreparedStatement ps = conn.prepareStatement(
-                 "SELECT event_name, description, event_date, distance, fee "
-               + "FROM events WHERE event_id = ?")) {
-
-        ps.setInt(1, eventId);
-
-        try (ResultSet rs = ps.executeQuery()) {
-
-            // A missing row used to throw an exception here. Now the
-            // administrator is simply told the event is gone.
-            if (!rs.next()) {
-                response.sendRedirect("manageEvents.jsp?error=notfound");
-                return;
-            }
-
-            eventName = rs.getString("event_name");
-            eventDescription = rs.getString("description");
-            eventDate = rs.getString("event_date");
-            eventDistance = rs.getDouble("distance");
-            eventFee = rs.getDouble("fee");
-        }
-
+    Event event;
+    try {
+        event = new EventDAO().findById(eventId);
     } catch (Exception e) {
         application.log("Loading event " + eventId + " for editing", e);
         response.sendRedirect("manageEvents.jsp?error=db");
+        return;
+    }
+
+    // A missing row used to throw an exception. Now the administrator is
+    // simply told the event is gone.
+    if (event == null) {
+        response.sendRedirect("manageEvents.jsp?error=notfound");
         return;
     }
 %>
@@ -104,36 +89,36 @@
 
                 <form action="EditEventServlet" method="post">
 
-                    <input type="hidden" name="eventId" value="<%= eventId %>">
+                    <input type="hidden" name="eventId" value="<%= event.getEventId() %>">
 
                     <div class="mb-3">
                         <label class="form-label" for="eventName">Event Name</label>
                         <input type="text" name="eventName" id="eventName" class="form-control"
-                               maxlength="255" value="<%= Web.esc(eventName) %>" required>
+                               maxlength="255" value="<%= Web.esc(event.getEventName()) %>" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label" for="description">Description</label>
                         <textarea name="description" id="description" class="form-control"
-                                  rows="4" required><%= Web.esc(eventDescription) %></textarea>
+                                  rows="4" required><%= Web.esc(event.getDescription()) %></textarea>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label" for="eventDate">Event Date</label>
                         <input type="date" name="eventDate" id="eventDate" class="form-control"
-                               value="<%= Web.esc(eventDate) %>" required>
+                               value="<%= Web.esc(event.getEventDate()) %>" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label" for="distance">Distance (KM)</label>
                         <input type="number" step="0.1" min="0.1" name="distance" id="distance"
-                               class="form-control" value="<%= eventDistance %>" required>
+                               class="form-control" value="<%= event.getDistance() %>" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label" for="fee">Fee (RM)</label>
                         <input type="number" step="0.01" min="0" name="fee" id="fee"
-                               class="form-control" value="<%= eventFee %>" required>
+                               class="form-control" value="<%= event.getFee() %>" required>
                     </div>
 
                     <button type="submit" class="btn btn-warning">Update Event</button>

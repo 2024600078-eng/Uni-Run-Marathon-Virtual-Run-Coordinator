@@ -1,12 +1,30 @@
-<%@page import="java.sql.*"%>
-<%@page import="util.DBConnection"%>
+<%@page import="java.util.List"%>
+<%@page import="dao.ResultDAO"%>
+<%@page import="model.Result"%>
 <%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%--
+    VIEW COMPONENT
+
+    Public race results, grouped by event and ranked fastest first.
+
+    The ordering and the pace calculation are done by the Model: ResultDAO
+    returns the rows already sorted, and Result.getPace() works out the pace.
+    This page only groups them and draws the table.
+--%>
 <%
-    // Open to visitors, in the same way a real race publishes its results.
-    // Only approved submissions are listed.
     boolean loggedIn = session.getAttribute("userId") != null;
     boolean isAdmin = "admin".equals(session.getAttribute("role"));
+
+    List<Result> results = null;
+    boolean loadFailed = false;
+
+    try {
+        results = new ResultDAO().findApprovedForLeaderboard();
+    } catch (Exception e) {
+        loadFailed = true;
+        application.log("Loading the leaderboard", e);
+    }
 %>
 <!DOCTYPE html>
 <html>
@@ -55,44 +73,41 @@
         </div>
 
         <%
-            // TIME_TO_SEC turns the stored hh:mm:ss text into a number, so that
-            // 9:30:00 sorts before 10:00:00 instead of after it as plain text
-            // comparison would give.
-            String sql = "SELECT e.event_name, e.distance AS event_distance, u.full_name, "
-                       + "r.distance_achieved, r.duration, TIME_TO_SEC(r.duration) AS seconds "
-                       + "FROM results r "
-                       + "JOIN registrations reg ON r.registration_id = reg.registration_id "
-                       + "JOIN users u ON reg.user_id = u.user_id "
-                       + "JOIN events e ON reg.event_id = e.event_id "
-                       + "WHERE r.approval_status = 'Approved' "
-                       + "ORDER BY e.event_date, e.event_name, seconds";
-
-            try (Connection conn = DBConnection.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql);
-                 ResultSet rs = ps.executeQuery()) {
-
+            if (loadFailed) {
+        %>
+            <div class="alert alert-danger">
+                Sorry, the leaderboard could not be loaded right now.
+            </div>
+        <%
+            } else if (results.isEmpty()) {
+        %>
+            <div class="card shadow-sm">
+                <div class="card-body text-center text-muted py-5">
+                    No approved results yet. Once an administrator approves a
+                    submission it will appear here.
+                </div>
+            </div>
+        <%
+            } else {
                 String currentEvent = null;
                 int rank = 0;
-                boolean any = false;
 
-                while (rs.next()) {
-                    any = true;
-                    String eventName = rs.getString("event_name");
+                for (Result result : results) {
 
-                    // Start a new table each time the event changes, and
-                    // restart the ranking from one.
-                    if (!eventName.equals(currentEvent)) {
+                    // The list arrives grouped by event, so a new table starts
+                    // whenever the event name changes.
+                    if (!result.getEventName().equals(currentEvent)) {
                         if (currentEvent != null) {
         %>
-                    </tbody></table></div></div>
+                        </tbody></table></div></div>
         <%
                         }
-                        currentEvent = eventName;
+                        currentEvent = result.getEventName();
                         rank = 0;
         %>
             <div class="event-block card shadow-sm mb-4">
                 <div class="card-body">
-                    <h5 class="fw-bold text-primary mb-3"><%= Web.esc(eventName) %></h5>
+                    <h5 class="fw-bold text-primary mb-3"><%= Web.esc(currentEvent) %></h5>
                     <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-primary">
@@ -109,49 +124,22 @@
                     }
 
                     rank++;
-
-                    double distance = rs.getDouble("distance_achieved");
-                    long seconds = rs.getLong("seconds");
-
-                    // Average time per kilometre, shown as m:ss.
-                    String pace = "&ndash;";
-                    if (distance > 0 && seconds > 0) {
-                        long perKm = Math.round(seconds / distance);
-                        pace = (perKm / 60) + ":" + String.format("%02d", perKm % 60) + " /km";
-                    }
-
                     String rankClass = (rank <= 3) ? ("rank-badge rank-" + rank) : "rank-badge";
+                    String pace = result.getPace();
         %>
                             <tr>
                                 <td><span class="<%= rankClass %>"><%= rank %></span></td>
-                                <td class="fw-bold"><%= Web.esc(rs.getString("full_name")) %></td>
-                                <td><%= distance %> KM</td>
-                                <td class="fw-bold"><%= Web.esc(rs.getString("duration")) %></td>
-                                <td class="text-muted"><%= pace %></td>
+                                <td class="fw-bold"><%= Web.esc(result.getParticipantName()) %></td>
+                                <td><%= result.getDistanceAchieved() %> KM</td>
+                                <td class="fw-bold"><%= Web.esc(result.getDuration()) %></td>
+                                <td class="text-muted">
+                                    <%= pace.isEmpty() ? "&ndash;" : Web.esc(pace) %>
+                                </td>
                             </tr>
         <%
                 }
-
-                if (any) {
         %>
                         </tbody></table></div></div>
-        <%
-                } else {
-        %>
-            <div class="card shadow-sm">
-                <div class="card-body text-center text-muted py-5">
-                    No approved results yet. Once an administrator approves a
-                    submission it will appear here.
-                </div>
-            </div>
-        <%
-                }
-            } catch (Exception e) {
-                application.log("Loading the leaderboard", e);
-        %>
-            <div class="alert alert-danger">
-                Sorry, the leaderboard could not be loaded right now.
-            </div>
         <%
             }
         %>

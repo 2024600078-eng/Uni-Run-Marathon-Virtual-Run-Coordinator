@@ -1,41 +1,42 @@
 <%@include file="/WEB-INF/jspf/adminGuard.jspf" %>
-<%@page import="java.sql.*"%>
-<%@page import="java.util.ArrayList"%>
 <%@page import="java.util.List"%>
-<%@page import="util.DBConnection"%>
+<%@page import="dao.EventDAO"%>
+<%@page import="dao.StatisticsDAO"%>
+<%@page import="model.EventRegistrationCount"%>
+<%@page import="model.SystemStatistics"%>
 <%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%--
+    VIEW COMPONENT
+
+    The administrator dashboard.
+
+    Both the summary figures and the chart data come from the Model. The bar
+    widths are worked out by EventRegistrationCount.percentageOf, so this page
+    does no arithmetic and contains no SQL.
+--%>
 <%
-    // Summary figures for the overview panel. All five counts are fetched in a
-    // single round trip rather than with one query each.
-    int totalEvents = 0;
-    int totalParticipants = 0;
-    int totalRegistrations = 0;
-    int pendingResults = 0;
-    int approvedResults = 0;
-    boolean statsFailed = false;
+    SystemStatistics stats = null;
+    List<EventRegistrationCount> chart = null;
+    boolean loadFailed = false;
 
-    String summarySql =
-          "SELECT (SELECT COUNT(*) FROM events) AS total_events, "
-        + "(SELECT COUNT(*) FROM users WHERE role = 'participant') AS total_participants, "
-        + "(SELECT COUNT(*) FROM registrations) AS total_registrations, "
-        + "(SELECT COUNT(*) FROM results WHERE approval_status = 'Pending') AS pending_results, "
-        + "(SELECT COUNT(*) FROM results WHERE approval_status = 'Approved') AS approved_results";
-
-    try (Connection conn = DBConnection.getConnection();
-         PreparedStatement ps = conn.prepareStatement(summarySql);
-         ResultSet rs = ps.executeQuery()) {
-
-        if (rs.next()) {
-            totalEvents = rs.getInt("total_events");
-            totalParticipants = rs.getInt("total_participants");
-            totalRegistrations = rs.getInt("total_registrations");
-            pendingResults = rs.getInt("pending_results");
-            approvedResults = rs.getInt("approved_results");
-        }
+    try {
+        stats = new StatisticsDAO().findSystemStatistics();
+        chart = new EventDAO().findRegistrationCounts();
     } catch (Exception e) {
-        statsFailed = true;
+        loadFailed = true;
         application.log("Loading admin dashboard statistics", e);
+    }
+
+    // The widest bar represents the busiest event and the rest are drawn in
+    // proportion to it.
+    int highest = 0;
+    if (chart != null) {
+        for (EventRegistrationCount row : chart) {
+            if (row.getTotal() > highest) {
+                highest = row.getTotal();
+            }
+        }
     }
 %>
 <!DOCTYPE html>
@@ -75,7 +76,7 @@
             </p>
         </div>
 
-        <% if (statsFailed) { %>
+        <% if (loadFailed) { %>
             <div class="alert alert-danger">
                 The summary figures could not be loaded right now.
             </div>
@@ -87,39 +88,39 @@
         <div class="stat-grid">
             <div class="stat-card">
                 <div class="stat-icon">&#127942;</div>
-                <div class="stat-value" data-count="<%= totalEvents %>"><%= totalEvents %></div>
+                <div class="stat-value" data-count="<%= stats.getTotalEvents() %>"><%= stats.getTotalEvents() %></div>
                 <div class="stat-label">Total Events</div>
             </div>
 
             <div class="stat-card is-info">
                 <div class="stat-icon">&#128101;</div>
-                <div class="stat-value" data-count="<%= totalParticipants %>"><%= totalParticipants %></div>
+                <div class="stat-value" data-count="<%= stats.getTotalParticipants() %>"><%= stats.getTotalParticipants() %></div>
                 <div class="stat-label">Participants</div>
             </div>
 
             <div class="stat-card is-info">
                 <div class="stat-icon">&#128221;</div>
-                <div class="stat-value" data-count="<%= totalRegistrations %>"><%= totalRegistrations %></div>
+                <div class="stat-value" data-count="<%= stats.getTotalRegistrations() %>"><%= stats.getTotalRegistrations() %></div>
                 <div class="stat-label">Registrations</div>
             </div>
 
             <div class="stat-card is-alert">
                 <div class="stat-icon">&#9203;</div>
-                <div class="stat-value" data-count="<%= pendingResults %>"><%= pendingResults %></div>
+                <div class="stat-value" data-count="<%= stats.getPendingResults() %>"><%= stats.getPendingResults() %></div>
                 <div class="stat-label">Awaiting Approval</div>
             </div>
 
             <div class="stat-card is-good">
                 <div class="stat-icon">&#9989;</div>
-                <div class="stat-value" data-count="<%= approvedResults %>"><%= approvedResults %></div>
+                <div class="stat-value" data-count="<%= stats.getApprovedResults() %>"><%= stats.getApprovedResults() %></div>
                 <div class="stat-label">Approved Results</div>
             </div>
         </div>
 
-        <% if (pendingResults > 0) { %>
+        <% if (stats.hasPendingWork()) { %>
             <div class="alert alert-warning">
-                <strong><%= pendingResults %></strong>
-                result<%= pendingResults == 1 ? " is" : "s are" %> waiting for your review.
+                <strong><%= stats.getPendingResults() %></strong>
+                result<%= stats.getPendingResults() == 1 ? " is" : "s are" %> waiting for your review.
                 <a href="approveResults.jsp" class="fw-bold">Review now</a>
             </div>
         <% } %>
@@ -128,58 +129,27 @@
         <div class="bg-white p-4 shadow-sm rounded mb-4">
             <h5 class="fw-bold text-primary mb-4">Registrations per Event</h5>
             <%
-                String chartSql = "SELECT e.event_name, COUNT(r.registration_id) AS total "
-                                + "FROM events e "
-                                + "LEFT JOIN registrations r ON e.event_id = r.event_id "
-                                + "GROUP BY e.event_id, e.event_name "
-                                + "ORDER BY total DESC, e.event_name";
-
-                try (Connection conn = DBConnection.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(chartSql);
-                     ResultSet rs = ps.executeQuery()) {
-
-                    // The widest bar represents the busiest event and the rest
-                    // are drawn in proportion to it.
-                    List<String> names = new ArrayList<String>();
-                    List<Integer> totals = new ArrayList<Integer>();
-                    int highest = 0;
-
-                    while (rs.next()) {
-                        names.add(rs.getString("event_name"));
-                        int total = rs.getInt("total");
-                        totals.add(Integer.valueOf(total));
-                        if (total > highest) {
-                            highest = total;
-                        }
+                if (chart.isEmpty()) {
+            %>
+                <p class="text-muted mb-0">No events have been created yet.</p>
+            <%
+                } else {
+                    int index = 0;
+                    for (EventRegistrationCount row : chart) {
+            %>
+                <div class="chart-row">
+                    <div class="chart-label" title="<%= Web.esc(row.getEventName()) %>">
+                        <%= Web.esc(row.getEventName()) %>
+                    </div>
+                    <div class="chart-track">
+                        <div class="chart-fill"
+                             style="width: <%= row.percentageOf(highest) %>%; animation-delay: <%= index * 12 %>0ms;"></div>
+                    </div>
+                    <div class="chart-value"><%= row.getTotal() %></div>
+                </div>
+            <%
+                        index++;
                     }
-
-                    if (names.isEmpty()) {
-            %>
-                        <p class="text-muted mb-0">No events have been created yet.</p>
-            <%
-                    } else {
-                        for (int i = 0; i < names.size(); i++) {
-                            int total = totals.get(i).intValue();
-                            int percent = (highest == 0) ? 0 : (int) Math.round(total * 100.0 / highest);
-            %>
-                        <div class="chart-row">
-                            <div class="chart-label" title="<%= Web.esc(names.get(i)) %>">
-                                <%= Web.esc(names.get(i)) %>
-                            </div>
-                            <div class="chart-track">
-                                <div class="chart-fill"
-                                     style="width: <%= percent %>%; animation-delay: <%= i * 12 %>0ms;"></div>
-                            </div>
-                            <div class="chart-value"><%= total %></div>
-                        </div>
-            <%
-                        }
-                    }
-                } catch (Exception e) {
-                    application.log("Loading registrations per event", e);
-            %>
-                    <p class="text-danger mb-0">The chart could not be loaded right now.</p>
-            <%
                 }
             %>
         </div>
@@ -226,11 +196,9 @@
     </div>
 
     <script>
-        /*
-         * Counts each summary figure up from zero when the page opens.
-         * The final number is already written in the HTML, so if scripting is
-         * unavailable the correct value is still displayed.
-         */
+        /* Counts each summary figure up from zero when the page opens. The
+           final number is already in the HTML, so if scripting is unavailable
+           the correct value is still shown. */
         (function () {
             var reduceMotion = window.matchMedia
                 && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -239,36 +207,33 @@
                 return;
             }
 
-            var figures = document.querySelectorAll('.stat-value[data-count]');
-
-            Array.prototype.forEach.call(figures, function (el) {
-                var target = parseInt(el.getAttribute('data-count'), 10);
-
-                if (isNaN(target) || target === 0) {
-                    return;
-                }
-
-                var duration = 900;
-                var started = null;
-
-                function step(timestamp) {
-                    if (started === null) {
-                        started = timestamp;
+            Array.prototype.forEach.call(
+                document.querySelectorAll('.stat-value[data-count]'),
+                function (el) {
+                    var target = parseInt(el.getAttribute('data-count'), 10);
+                    if (isNaN(target) || target === 0) {
+                        return;
                     }
 
-                    var progress = Math.min((timestamp - started) / duration, 1);
-                    // Ease out, so the number slows as it nears the total.
-                    var eased = 1 - Math.pow(1 - progress, 3);
-                    el.textContent = Math.round(eased * target);
+                    var duration = 900;
+                    var started = null;
 
-                    if (progress < 1) {
-                        window.requestAnimationFrame(step);
+                    function step(timestamp) {
+                        if (started === null) {
+                            started = timestamp;
+                        }
+                        var progress = Math.min((timestamp - started) / duration, 1);
+                        var eased = 1 - Math.pow(1 - progress, 3);
+                        el.textContent = Math.round(eased * target);
+                        if (progress < 1) {
+                            window.requestAnimationFrame(step);
+                        }
                     }
-                }
 
-                el.textContent = '0';
-                window.requestAnimationFrame(step);
-            });
+                    el.textContent = '0';
+                    window.requestAnimationFrame(step);
+                }
+            );
         })();
     </script>
 

@@ -1,24 +1,29 @@
 package controller;
 
+import dao.UserDAO;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import util.DBConnection;
 import util.PasswordUtil;
 
 /**
+ * CONTROLLER COMPONENT
+ *
  * Creates a new participant account.
+ *
+ * The validation rules live here because they are system logic. The storing
+ * of the account is delegated to UserDAO, which is the only class that talks
+ * to the database.
  */
 @WebServlet(name = "RegisterServlet", urlPatterns = {"/RegisterServlet"})
 public class RegisterServlet extends HttpServlet {
 
     private static final int MIN_PASSWORD_LENGTH = 6;
+
+    private final UserDAO userDAO = new UserDAO();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -53,26 +58,16 @@ public class RegisterServlet extends HttpServlet {
             return;
         }
 
-        try (Connection conn = DBConnection.getConnection()) {
-
-            if (emailAlreadyUsed(conn, email)) {
+        try {
+            if (userDAO.emailExists(email)) {
                 forwardBack(request, response,
                         "That email address is already registered. Please log in instead.",
                         fullName, email);
                 return;
             }
 
-            String sql = "INSERT INTO users (full_name, email, password, role) VALUES (?, ?, ?, 'participant')";
-
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-
-                ps.setString(1, fullName);
-                ps.setString(2, email);
-                // Only the hash is stored, never the password itself.
-                ps.setString(3, PasswordUtil.hash(password));
-
-                ps.executeUpdate();
-            }
+            // Only the hash reaches the Model, never the password itself.
+            userDAO.insertParticipant(fullName, email, PasswordUtil.hash(password));
 
             response.sendRedirect("login.jsp?status=registered");
 
@@ -81,15 +76,6 @@ public class RegisterServlet extends HttpServlet {
             forwardBack(request, response,
                     "Sorry, the account could not be created. Please try again.",
                     fullName, email);
-        }
-    }
-
-    private boolean emailAlreadyUsed(Connection conn, String email) throws Exception {
-        try (PreparedStatement ps = conn.prepareStatement("SELECT 1 FROM users WHERE email = ?")) {
-            ps.setString(1, email);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
         }
     }
 

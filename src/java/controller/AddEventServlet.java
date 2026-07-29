@@ -1,21 +1,27 @@
 package controller;
 
+import dao.EventDAO;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import util.DBConnection;
+import model.Event;
 
 /**
+ * CONTROLLER COMPONENT
+ *
  * Creates a new marathon event. Administrators only.
+ *
+ * The controller checks permission, validates the input, builds an Event
+ * object and hands it to the Model to be stored.
  */
 @WebServlet(name = "AddEventServlet", urlPatterns = {"/AddEventServlet"})
 public class AddEventServlet extends HttpServlet {
+
+    private final EventDAO eventDAO = new EventDAO();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -57,19 +63,8 @@ public class AddEventServlet extends HttpServlet {
             return;
         }
 
-        String sql = "INSERT INTO events (event_name, description, event_date, distance, fee) VALUES (?, ?, ?, ?, ?)";
-
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, eventName);
-            ps.setString(2, description);
-            ps.setString(3, eventDate);
-            ps.setDouble(4, distance);
-            ps.setDouble(5, fee);
-
-            ps.executeUpdate();
-
+        try {
+            eventDAO.insert(new Event(eventName, description, eventDate, distance, fee));
             response.sendRedirect("manageEvents.jsp?status=added");
 
         } catch (Exception e) {

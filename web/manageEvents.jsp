@@ -1,8 +1,26 @@
 <%@include file="/WEB-INF/jspf/adminGuard.jspf" %>
-<%@page import="java.sql.*"%>
-<%@page import="util.DBConnection"%>
+<%@page import="java.util.List"%>
+<%@page import="dao.EventDAO"%>
+<%@page import="model.Event"%>
 <%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%--
+    VIEW COMPONENT
+
+    Lists the events for an administrator, with links to add, edit and delete.
+    Data comes from EventDAO; this page contains no SQL.
+--%>
+<%
+    List<Event> events = null;
+    boolean loadFailed = false;
+
+    try {
+        events = new EventDAO().findAll();
+    } catch (Exception e) {
+        loadFailed = true;
+        application.log("Loading the event list for an administrator", e);
+    }
+%>
 <!DOCTYPE html>
 <html>
 <head>
@@ -93,56 +111,7 @@
 
                 <tbody>
                 <%
-                    String sql = "SELECT event_id, event_name, description, event_date, distance, fee "
-                               + "FROM events ORDER BY event_id";
-
-                    try (Connection conn = DBConnection.getConnection();
-                         PreparedStatement ps = conn.prepareStatement(sql);
-                         ResultSet rs = ps.executeQuery()) {
-
-                        boolean hasEvents = false;
-                        while (rs.next()) {
-                            hasEvents = true;
-                            int eventId = rs.getInt("event_id");
-                %>
-                    <tr class="event-row">
-                        <td><%= eventId %></td>
-                        <td><%= Web.esc(rs.getString("event_name")) %></td>
-                        <td><%= Web.esc(rs.getString("description")) %></td>
-                        <td><%= Web.esc(rs.getString("event_date")) %></td>
-                        <td><%= rs.getDouble("distance") %> KM</td>
-                        <td>RM <%= String.format("%.2f", rs.getDouble("fee")) %></td>
-                        <td>
-                            <div class="d-flex gap-2">
-                                <a href="editEvent.jsp?id=<%= eventId %>" class="btn btn-warning btn-sm">
-                                    Edit
-                                </a>
-
-                                <%-- A delete changes data, so it is sent as a POST
-                                     rather than as a link that could be followed
-                                     by accident. --%>
-                                <form action="DeleteEventServlet" method="post"
-                                      onsubmit="return confirm('Delete this event? Its registrations and results will be removed too.');">
-                                    <input type="hidden" name="id" value="<%= eventId %>">
-                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                <%
-                        }
-
-                        if (!hasEvents) {
-                %>
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
-                            No events have been created yet.
-                        </td>
-                    </tr>
-                <%
-                        }
-                    } catch (Exception e) {
-                        application.log("Loading the event list for an administrator", e);
+                    if (loadFailed) {
                 %>
                     <tr>
                         <td colspan="7" class="text-danger text-center py-4">
@@ -150,6 +119,42 @@
                         </td>
                     </tr>
                 <%
+                    } else if (events.isEmpty()) {
+                %>
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            No events have been created yet.
+                        </td>
+                    </tr>
+                <%
+                    } else {
+                        for (Event event : events) {
+                %>
+                    <tr class="event-row">
+                        <td><%= event.getEventId() %></td>
+                        <td><%= Web.esc(event.getEventName()) %></td>
+                        <td><%= Web.esc(event.getDescription()) %></td>
+                        <td><%= Web.esc(event.getEventDate()) %></td>
+                        <td><%= event.getDistance() %> KM</td>
+                        <td>RM <%= String.format("%.2f", event.getFee()) %></td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <a href="editEvent.jsp?id=<%= event.getEventId() %>"
+                                   class="btn btn-warning btn-sm">Edit</a>
+
+                                <%-- A delete changes data, so it is sent as a POST
+                                     rather than as a link that could be followed
+                                     by accident. --%>
+                                <form action="DeleteEventServlet" method="post"
+                                      onsubmit="return confirm('Delete this event? Its registrations and results will be removed too.');">
+                                    <input type="hidden" name="id" value="<%= event.getEventId() %>">
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                <%
+                        }
                     }
                 %>
                 </tbody>

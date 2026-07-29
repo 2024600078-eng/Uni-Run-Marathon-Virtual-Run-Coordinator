@@ -1,46 +1,28 @@
 <%@include file="/WEB-INF/jspf/participantGuard.jspf" %>
-<%@page import="java.sql.*"%>
-<%@page import="util.DBConnection"%>
+<%@page import="java.util.List"%>
+<%@page import="dao.RegistrationDAO"%>
+<%@page import="dao.StatisticsDAO"%>
+<%@page import="model.ParticipantStatistics"%>
+<%@page import="model.Registration"%>
 <%@page import="util.Web"%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%--
+    VIEW COMPONENT
+
+    The participant's own dashboard. Both the summary figures and the list of
+    registered events come from the Model, so this page contains no SQL.
+--%>
 <%
-    // Personal totals for the signed in participant, all in one round trip.
-    int myEvents = 0;
-    int mySubmitted = 0;
-    int myApproved = 0;
-    int myPending = 0;
-    boolean statsFailed = false;
+    ParticipantStatistics stats = null;
+    List<Registration> registrations = null;
+    boolean loadFailed = false;
 
-    String summarySql =
-          "SELECT "
-        + "(SELECT COUNT(*) FROM registrations WHERE user_id = ?) AS my_events, "
-        + "(SELECT COUNT(*) FROM results res JOIN registrations r "
-        + "   ON res.registration_id = r.registration_id WHERE r.user_id = ?) AS my_submitted, "
-        + "(SELECT COUNT(*) FROM results res JOIN registrations r "
-        + "   ON res.registration_id = r.registration_id "
-        + "   WHERE r.user_id = ? AND res.approval_status = 'Approved') AS my_approved, "
-        + "(SELECT COUNT(*) FROM results res JOIN registrations r "
-        + "   ON res.registration_id = r.registration_id "
-        + "   WHERE r.user_id = ? AND res.approval_status = 'Pending') AS my_pending";
-
-    try (Connection conn = DBConnection.getConnection();
-         PreparedStatement ps = conn.prepareStatement(summarySql)) {
-
-        for (int i = 1; i <= 4; i++) {
-            ps.setInt(i, currentUserId);
-        }
-
-        try (ResultSet rs = ps.executeQuery()) {
-            if (rs.next()) {
-                myEvents = rs.getInt("my_events");
-                mySubmitted = rs.getInt("my_submitted");
-                myApproved = rs.getInt("my_approved");
-                myPending = rs.getInt("my_pending");
-            }
-        }
+    try {
+        stats = new StatisticsDAO().findParticipantStatistics(currentUserId);
+        registrations = new RegistrationDAO().findByUser(currentUserId);
     } catch (Exception e) {
-        statsFailed = true;
-        application.log("Loading dashboard statistics for user " + currentUserId, e);
+        loadFailed = true;
+        application.log("Loading dashboard for user " + currentUserId, e);
     }
 %>
 <!DOCTYPE html>
@@ -83,29 +65,29 @@
             </div>
         <% } %>
 
-        <% if (!statsFailed) { %>
+        <% if (!loadFailed) { %>
         <div class="stat-grid">
             <div class="stat-card">
                 <div class="stat-icon">&#127939;</div>
-                <div class="stat-value" data-count="<%= myEvents %>"><%= myEvents %></div>
+                <div class="stat-value" data-count="<%= stats.getEventsJoined() %>"><%= stats.getEventsJoined() %></div>
                 <div class="stat-label">Events Joined</div>
             </div>
 
             <div class="stat-card is-info">
                 <div class="stat-icon">&#128228;</div>
-                <div class="stat-value" data-count="<%= mySubmitted %>"><%= mySubmitted %></div>
+                <div class="stat-value" data-count="<%= stats.getResultsSubmitted() %>"><%= stats.getResultsSubmitted() %></div>
                 <div class="stat-label">Results Sent</div>
             </div>
 
             <div class="stat-card is-good">
                 <div class="stat-icon">&#9989;</div>
-                <div class="stat-value" data-count="<%= myApproved %>"><%= myApproved %></div>
+                <div class="stat-value" data-count="<%= stats.getResultsApproved() %>"><%= stats.getResultsApproved() %></div>
                 <div class="stat-label">Approved</div>
             </div>
 
             <div class="stat-card is-alert">
                 <div class="stat-icon">&#9203;</div>
-                <div class="stat-value" data-count="<%= myPending %>"><%= myPending %></div>
+                <div class="stat-value" data-count="<%= stats.getResultsPending() %>"><%= stats.getResultsPending() %></div>
                 <div class="stat-label">Pending Review</div>
             </div>
         </div>
@@ -131,68 +113,46 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <%
-                        // Only the rows belonging to the signed in participant.
-                        String sql = "SELECT e.event_name, e.event_date, e.distance, "
-                                   + "r.registration_date, r.status "
-                                   + "FROM registrations r "
-                                   + "JOIN events e ON r.event_id = e.event_id "
-                                   + "WHERE r.user_id = ? "
-                                   + "ORDER BY e.event_date";
-
-                        try (Connection conn = DBConnection.getConnection();
-                             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-                            ps.setInt(1, currentUserId);
-
-                            try (ResultSet rs = ps.executeQuery()) {
-
-                                boolean hasData = false;
-                                while (rs.next()) {
-                                    hasData = true;
-                    %>
+                <%
+                    if (loadFailed) {
+                %>
                     <tr>
-                        <td class="fw-bold"><%= Web.esc(rs.getString("event_name")) %></td>
-                        <td><%= Web.esc(rs.getString("event_date")) %></td>
-                        <td><span class="badge bg-secondary"><%= rs.getDouble("distance") %> KM</span></td>
-                        <td><%= rs.getTimestamp("registration_date") %></td>
-                        <td><span class="badge bg-success"><%= Web.esc(rs.getString("status")) %></span></td>
+                        <td colspan="5" class="text-danger text-center py-4">
+                            Sorry, your registrations could not be loaded right now.
+                        </td>
                     </tr>
-                    <%
-                                }
-
-                                if (!hasData) {
-                    %>
+                <%
+                    } else if (registrations.isEmpty()) {
+                %>
                     <tr>
                         <td colspan="5" class="text-center text-muted py-4">
                             You have not registered for any events yet.
                             <a href="events.jsp">Browse the available events</a>.
                         </td>
                     </tr>
-                    <%
-                                }
-                            }
-                        } catch (Exception e) {
-                            // The details go to the server log, not to the browser.
-                            application.log("Loading dashboard for user " + currentUserId, e);
-                    %>
+                <%
+                    } else {
+                        for (Registration registration : registrations) {
+                %>
                     <tr>
-                        <td colspan="5" class="text-danger text-center py-4">
-                            Sorry, your registrations could not be loaded right now.
-                        </td>
+                        <td class="fw-bold"><%= Web.esc(registration.getEventName()) %></td>
+                        <td><%= Web.esc(registration.getEventDate()) %></td>
+                        <td><span class="badge bg-secondary"><%= registration.getEventDistance() %> KM</span></td>
+                        <td><%= registration.getRegistrationDate() %></td>
+                        <td><span class="badge bg-success"><%= Web.esc(registration.getStatus()) %></span></td>
                     </tr>
-                    <%
+                <%
                         }
-                    %>
+                    }
+                %>
                 </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        /* Counts the personal totals up from zero, exactly as the admin
-           dashboard does. The real numbers are already in the HTML, so the
-           page is still correct if scripting is unavailable. */
+        /* Counts the personal totals up from zero. The real numbers are
+           already in the HTML, so the page is still correct without script. */
         (function () {
             var reduceMotion = window.matchMedia
                 && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
