@@ -1,7 +1,12 @@
 # --------------------------------------------------------------------------
-# The patterns below are deliberately not anchored to the repository root,
-# because the project itself lives one folder down in CSC584-Uni-Run. Leaving
-# the leading slash on would stop them matching anything.
+# The project lives one folder down, in CSC584-Uni-Run, so none of these
+# patterns may be anchored to the repository root.
+#
+# A pattern containing a slash anywhere except at the end is treated as
+# relative to this file, so "nbproject/private/" would only match at the root
+# and would miss the real folder. Those patterns are written with a leading
+# **/ so they match at any depth. Patterns with no internal slash, such as
+# "build/", already match at any depth on their own.
 # --------------------------------------------------------------------------
 
 # --------------------------------------------------------------------------
@@ -17,7 +22,7 @@ dist/
 # they would be wrong on anybody else's computer. NetBeans recreates them the
 # first time the project is opened.
 # --------------------------------------------------------------------------
-nbproject/private/
+**/nbproject/private/
 
 # --------------------------------------------------------------------------
 # Local database backups
@@ -30,7 +35,7 @@ backup_*.sql
 # These are written beside the running Tomcat instance rather than inside the
 # project, but this keeps any stray local folder out of the repository.
 # --------------------------------------------------------------------------
-web/uploads/
+**/web/uploads/
 
 # --------------------------------------------------------------------------
 # Editor and operating system noise
